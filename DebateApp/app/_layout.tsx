@@ -19,12 +19,11 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="+not-found" />
-        <Stack.Screen name="lincoln-douglas" options={{ title: 'Lincoln Douglas' }} />
-        <Stack.Screen name="public-forum" options={{ title: 'Public Forum' }} />
-        <Stack.Screen name="congress" options={{ title: 'Congress' }} />
+        <Stack.Screen name="lincoln-douglas" />
+        <Stack.Screen name="public-forum" />
+        <Stack.Screen name="congress" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
