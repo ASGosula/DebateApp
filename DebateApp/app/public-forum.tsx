@@ -1,13 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 
 const BUTTON_COLOR = '#E20000';
+const SCREENSHOT = require('../assets/images/Screenshot 2025-06-19 at 10.18.03 AM.png');
+const { width } = Dimensions.get('window');
 
 export default function PublicForumScreen() {
   const router = useRouter();
   return (
     <View style={styles.container}>
+      <Image source={SCREENSHOT} style={styles.image} resizeMode="contain" />
       <Text style={styles.title}>Public Forum</Text>
       <TouchableOpacity style={styles.button} onPress={() => router.push('/public-forum/real')}>
         <Text style={styles.buttonText}>Real Debate PF</Text>
@@ -26,6 +29,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     padding: 24,
+  },
+  image: {
+    width: width * 0.8,
+    maxWidth: 350,
+    height: 140,
+    borderRadius: 18,
+    marginBottom: 24,
+    marginTop: 16,
+    alignSelf: 'center',
+    backgroundColor: '#f8f8f8',
   },
   title: {
     fontSize: 28,
