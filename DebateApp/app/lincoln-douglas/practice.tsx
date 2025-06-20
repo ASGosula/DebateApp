@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export default function LincolnDouglasPractice() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Under Construction</Text>
+      <Text style={styles.text}>hello</Text>
     </View>
   );
 }
