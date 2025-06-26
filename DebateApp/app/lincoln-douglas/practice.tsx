@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Text, FlatList, 
 import { ThemedText } from '@/components/ThemedText';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
+import { Link } from 'expo-router';
 
 const PREP_TIME_SECONDS = 4 * 60; // 4 minutes
 const { width } = Dimensions.get('window');
@@ -315,6 +316,13 @@ export default function LincolnDouglasPractice() {
         <View style={styles.header}>
           <ThemedText type="title" style={styles.headerTitle}>Lincoln Douglas</ThemedText>
           <ThemedText type="subtitle" style={styles.headerSubtitle}>Practice Debate</ThemedText>
+        </View>
+
+        {/* Practice Speaking Button */}
+        <View style={{ marginBottom: 16 }}>
+          <Link href="/lincoln-douglas/practice-speaking" style={{ backgroundColor: '#E20000', padding: 12, borderRadius: 8, alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Practice Speaking</Text>
+          </Link>
         </View>
 
         {/* Prep Timer Card */}
