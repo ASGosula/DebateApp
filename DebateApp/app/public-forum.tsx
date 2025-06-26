@@ -13,10 +13,10 @@ export default function PublicForumScreen() {
       <Image source={SCREENSHOT} style={styles.image} resizeMode="contain" />
       <Text style={styles.title}>Public Forum</Text>
       <TouchableOpacity style={styles.button} onPress={() => router.push('/public-forum/real')}>
-        <Text style={styles.buttonText}>Real Debate PF</Text>
+        <Text style={styles.buttonText}>Real Debate</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={() => router.push('/public-forum/practice')}>
-        <Text style={styles.buttonText}>Debate Practice PF</Text>
+        <Text style={styles.buttonText}>Debate Practice</Text>
       </TouchableOpacity>
     </View>
   );
