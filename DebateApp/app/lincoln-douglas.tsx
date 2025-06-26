@@ -11,7 +11,7 @@ export default function LincolnDouglasScreen() {
   return (
     <View style={styles.container}>
       <Image source={SCREENSHOT} style={styles.image} resizeMode="contain" />
-      <Text style={styles.title}>Lincoln </Text>
+      <Text style={styles.title}>Lincoln Douglas</Text>
       <TouchableOpacity style={styles.button} onPress={() => router.push('/lincoln-douglas/real')}>
         <Text style={styles.buttonText}>Real Debate</Text>
       </TouchableOpacity>
