@@ -1,8 +1,19 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 
 const PREP_TIME_SECONDS = 4 * 60; // 4 minutes
+const { width } = Dimensions.get('window');
+
+const debateSections = [
+  { label: "1AC", duration: 6 * 60 },
+  { label: "CX1", duration: 3 * 60 },
+  { label: "1NC", duration: 7 * 60 },
+  { label: "CX2", duration: 3 * 60 },
+  { label: "1AR", duration: 4 * 60 },
+  { label: "NR", duration: 6 * 60 },
+  { label: "2AR", duration: 3 * 60 },
+];
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60).toString().padStart(1, '0');
@@ -11,42 +22,163 @@ function formatTime(seconds: number) {
 }
 
 export default function LincolnDouglasReal() {
-  const [timeLeft, setTimeLeft] = useState(PREP_TIME_SECONDS);
-  const [isRunning, setIsRunning] = useState(false);
-  const intervalRef = useRef<any>(null);
+  // Prep timer state
+  const [prepTimeLeft, setPrepTimeLeft] = useState(PREP_TIME_SECONDS);
+  const [isPrepRunning, setIsPrepRunning] = useState(false);
+  const prepIntervalRef = useRef<any>(null);
 
+  // Debate timer state
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [debateTimeLeft, setDebateTimeLeft] = useState(debateSections[0].duration);
+  const [isDebateRunning, setIsDebateRunning] = useState(false);
+  const debateIntervalRef = useRef<any>(null);
+
+  // Prep timer logic
   React.useEffect(() => {
-    if (isRunning && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    if (isPrepRunning && prepTimeLeft > 0) {
+      prepIntervalRef.current = setInterval(() => {
+        setPrepTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
-    } else if (!isRunning && intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    } else if (!isPrepRunning && prepIntervalRef.current) {
+      clearInterval(prepIntervalRef.current);
+      prepIntervalRef.current = null;
     }
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (prepIntervalRef.current) clearInterval(prepIntervalRef.current);
     };
-  }, [isRunning, timeLeft]);
+  }, [isPrepRunning, prepTimeLeft]);
 
-  const handleReset = () => {
-    setTimeLeft(PREP_TIME_SECONDS);
-    setIsRunning(false);
+  // Debate timer logic
+  React.useEffect(() => {
+    if (isDebateRunning && debateTimeLeft > 0) {
+      debateIntervalRef.current = setInterval(() => {
+        setDebateTimeLeft((prev) => {
+          if (prev <= 1) {
+            // Auto-advance to next section
+            if (currentSectionIndex < debateSections.length - 1) {
+              setCurrentSectionIndex(currentSectionIndex + 1);
+              return debateSections[currentSectionIndex + 1].duration;
+            } else {
+              // End of debate
+              setIsDebateRunning(false);
+              return 0;
+            }
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (!isDebateRunning && debateIntervalRef.current) {
+      clearInterval(debateIntervalRef.current);
+      debateIntervalRef.current = null;
+    }
+    return () => {
+      if (debateIntervalRef.current) clearInterval(debateIntervalRef.current);
+    };
+  }, [isDebateRunning, debateTimeLeft, currentSectionIndex]);
+
+  // Update debate time when section changes
+  React.useEffect(() => {
+    setDebateTimeLeft(debateSections[currentSectionIndex].duration);
+  }, [currentSectionIndex]);
+
+  const handlePrepReset = () => {
+    setPrepTimeLeft(PREP_TIME_SECONDS);
+    setIsPrepRunning(false);
+  };
+
+  const handleDebateStart = () => {
+    setIsDebateRunning(true);
+  };
+
+  const handleDebateStop = () => {
+    setIsDebateRunning(false);
+  };
+
+  const handleDebateReset = () => {
+    setDebateTimeLeft(debateSections[currentSectionIndex].duration);
+    setIsDebateRunning(false);
+  };
+
+  const handleDebateResetAll = () => {
+    // Reset prep timer
+    setPrepTimeLeft(PREP_TIME_SECONDS);
+    setIsPrepRunning(false);
+    
+    // Reset debate timer
+    setCurrentSectionIndex(0);
+    setDebateTimeLeft(debateSections[0].duration);
+    setIsDebateRunning(false);
   };
 
   return (
     <View style={styles.container}>
-      <ThemedText type="subtitle" style={styles.prepLabel}>Prep</ThemedText>
-      <ThemedText type="title" style={styles.timerTextRed}>{formatTime(timeLeft)}</ThemedText>
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.controlButton} onPress={() => setIsRunning(true)}>
-          <ThemedText style={styles.controlButtonText}>Start</ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.controlButton} onPress={() => setIsRunning(false)}>
-          <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-          <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+      {/* Header */}
+      <View style={styles.header}>
+        <ThemedText type="title" style={styles.headerTitle}>Lincoln Douglas</ThemedText>
+        <ThemedText type="subtitle" style={styles.headerSubtitle}>Real Debate</ThemedText>
+      </View>
+
+      {/* Prep Timer Card */}
+      <View style={styles.timerCard}>
+        <View style={styles.cardHeader}>
+          <ThemedText type="subtitle" style={styles.prepLabel}>Prep Time</ThemedText>
+        </View>
+        <View style={styles.timerDisplay}>
+          <ThemedText type="title" style={styles.timerTextRed}>{formatTime(prepTimeLeft)}</ThemedText>
+        </View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity 
+            style={[styles.controlButton, isPrepRunning && styles.activeButton]} 
+            onPress={() => setIsPrepRunning(true)}
+          >
+            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.controlButton, !isPrepRunning && styles.activeButton]} 
+            onPress={() => setIsPrepRunning(false)}
+          >
+            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.resetButton} onPress={handlePrepReset}>
+            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Debate Timer Card */}
+      <View style={styles.timerCard}>
+        <View style={styles.cardHeader}>
+          <ThemedText type="subtitle" style={styles.debateLabel}>
+            {debateSections[currentSectionIndex].label}
+          </ThemedText>
+          <ThemedText type="default" style={styles.sectionInfo}>
+            Section {currentSectionIndex + 1} of {debateSections.length}
+          </ThemedText>
+        </View>
+        <View style={styles.timerDisplay}>
+          <ThemedText type="title" style={styles.debateTimerText}>
+            {formatTime(debateTimeLeft)}
+          </ThemedText>
+        </View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity 
+            style={[styles.controlButton, isDebateRunning && styles.activeButton]} 
+            onPress={handleDebateStart}
+          >
+            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.controlButton, !isDebateRunning && styles.activeButton]} 
+            onPress={handleDebateStop}
+          >
+            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.resetButton} onPress={handleDebateReset}>
+            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity style={styles.resetAllButton} onPress={handleDebateResetAll}>
+          <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
         </TouchableOpacity>
       </View>
     </View>
@@ -56,53 +188,136 @@ export default function LincolnDouglasReal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 16,
     paddingTop: 40,
   },
+  header: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+  },
+  timerCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cardHeader: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   prepLabel: {
-    marginBottom: 8,
-    letterSpacing: 1,
-    color: '#E20000', // theme tint
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  debateLabel: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  sectionInfo: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  timerDisplay: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
   },
   timerTextRed: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#E20000',
-    marginBottom: 20,
     textAlign: 'center',
-    marginTop: 20,
+  },
+  debateTimerText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#E20000',
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
+    marginBottom: 12,
   },
   controlButton: {
-    backgroundColor: '#E20000', // theme tint
+    backgroundColor: '#E20000',
     paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginHorizontal: 4,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    flex: 1,
+    marginHorizontal: 3,
+    alignItems: 'center',
+    shadowColor: '#E20000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  activeButton: {
+    backgroundColor: '#b30000',
+    transform: [{ scale: 0.98 }],
   },
   controlButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   resetButton: {
-    backgroundColor: '#000000', // black for reset
+    backgroundColor: '#000000',
     paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginHorizontal: 4,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    flex: 1,
+    marginHorizontal: 3,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   resetButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+  },
+  resetAllButton: {
+    backgroundColor: '#E20000',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#E20000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
 }); 
