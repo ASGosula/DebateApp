@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, SafeAreaView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 
 const QUESTIONING_BLOCK_SECONDS = 30; // 30 seconds
@@ -70,70 +70,78 @@ export default function CongressReal() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <ThemedText type="title" style={styles.headerTitle}>Congress</ThemedText>
-        <ThemedText type="subtitle" style={styles.headerSubtitle}>Real Debate</ThemedText>
-      </View>
+    <SafeAreaView style={{flex: 1}}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.headerTitle}>Congress</ThemedText>
+          <ThemedText type="subtitle" style={styles.headerSubtitle}>Real Debate</ThemedText>
+        </View>
 
-      {/* Questioning Block Timer Card */}
-      <View style={styles.timerCard}>
-        <View style={styles.cardHeader}>
-          <ThemedText type="subtitle" style={styles.prepLabel}>Questioning Block</ThemedText>
+        {/* Questioning Block Timer Card */}
+        <View style={styles.timerCard}>
+          <View style={styles.cardHeader}>
+            <ThemedText type="subtitle" style={styles.prepLabel}>Questioning Block</ThemedText>
+          </View>
+          <View style={styles.timerDisplay}>
+            <ThemedText type="title" style={styles.timerTextRed}>{formatTime(questioningLeft)}</ThemedText>
+          </View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.controlButton, isQuestioningRunning && styles.activeButton]} 
+              onPress={() => setIsQuestioningRunning(true)}
+            >
+              <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.controlButton, !isQuestioningRunning && styles.activeButton]} 
+              onPress={() => setIsQuestioningRunning(false)}
+            >
+              <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.resetButton} onPress={handleQuestioningReset}>
+              <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.skipButton} onPress={() => setQuestioningLeft((prev) => Math.max(0, prev - 10))}>
+              <ThemedText style={styles.skipButtonText}>-10s</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.timerDisplay}>
-          <ThemedText type="title" style={styles.timerTextRed}>{formatTime(questioningLeft)}</ThemedText>
-        </View>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity 
-            style={[styles.controlButton, isQuestioningRunning && styles.activeButton]} 
-            onPress={() => setIsQuestioningRunning(true)}
-          >
-            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.controlButton, !isQuestioningRunning && styles.activeButton]} 
-            onPress={() => setIsQuestioningRunning(false)}
-          >
-            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.resetButton} onPress={handleQuestioningReset}>
-            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      {/* Speech Timer Card */}
-      <View style={styles.timerCard}>
-        <View style={styles.cardHeader}>
-          <ThemedText type="subtitle" style={styles.debateLabel}>Speech Time</ThemedText>
-        </View>
-        <View style={styles.timerDisplay}>
-          <ThemedText type="title" style={styles.debateTimerText}>{formatTime(speechLeft)}</ThemedText>
-        </View>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity 
-            style={[styles.controlButton, isSpeechRunning && styles.activeButton]} 
-            onPress={() => setIsSpeechRunning(true)}
-          >
-            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+        {/* Speech Timer Card */}
+        <View style={styles.timerCard}>
+          <View style={styles.cardHeader}>
+            <ThemedText type="subtitle" style={styles.debateLabel}>Speech Time</ThemedText>
+          </View>
+          <View style={styles.timerDisplay}>
+            <ThemedText type="title" style={styles.debateTimerText}>{formatTime(speechLeft)}</ThemedText>
+          </View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.controlButton, isSpeechRunning && styles.activeButton]} 
+              onPress={() => setIsSpeechRunning(true)}
+            >
+              <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.controlButton, !isSpeechRunning && styles.activeButton]} 
+              onPress={() => setIsSpeechRunning(false)}
+            >
+              <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.resetButton} onPress={handleSpeechReset}>
+              <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.skipButton} onPress={() => setSpeechLeft((prev) => Math.max(0, prev - 10))}>
+              <ThemedText style={styles.skipButtonText}>-10s</ThemedText>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.resetAllButton} onPress={handleResetAll}>
+            <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.controlButton, !isSpeechRunning && styles.activeButton]} 
-            onPress={() => setIsSpeechRunning(false)}
-          >
-            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.resetButton} onPress={handleSpeechReset}>
-            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
-          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.resetAllButton} onPress={handleResetAll}>
-          <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
-        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -266,5 +274,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 2,
     elevation: 2,
+  },
+  skipButton: {
+    backgroundColor: '#000000',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 2,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  skipButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 }); 

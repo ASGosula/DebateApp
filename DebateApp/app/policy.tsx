@@ -6,16 +6,16 @@ const BUTTON_COLOR = '#E20000';
 const SCREENSHOT = require('../assets/images/Screenshot 2025-06-19 at 10.18.03 AM.png');
 const { width } = Dimensions.get('window');
 
-export default function LincolnDouglasScreen() {
+export default function PolicyScreen() {
   const router = useRouter();
   return (
     <SafeAreaView style={styles.container}>
       <Image source={SCREENSHOT} style={styles.image} resizeMode="contain" />
-      <Text style={styles.title}>Lincoln Douglas</Text>
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/lincoln-douglas/real')}>
-        <Text style={styles.buttonText}>Real debate</Text>
+      <Text style={styles.title}>Policy</Text>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/policy/real')}>
+        <Text style={styles.buttonText}>Real Debate</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/lincoln-douglas/practice')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/policy/practice')}>
         <Text style={styles.buttonText}>Debate Practice</Text>
       </TouchableOpacity>
     </SafeAreaView>

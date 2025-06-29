@@ -4,16 +4,16 @@ import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
 
 const PROMPTS = [
-  'Should the filibuster be abolished in Congress?',
-  'Is the current committee system effective in Congress?',
-  'What is the most important role of a Senator?',
-  'Should term limits be imposed on members of Congress?',
-  'How can Congress better represent minority interests?',
-  'Should campaign finance laws be reformed?',
-  'What is the best way to resolve gridlock in Congress?',
-  'Should Congress have more oversight over the executive branch?',
-  'Is the two-party system beneficial for Congress?',
-  'How can Congress improve public trust?'
+  'Should the United States federal government increase its investment in renewable energy?',
+  'Is the policy of mandatory minimum sentencing effective in reducing crime?',
+  'Should the U.S. adopt a universal healthcare system?',
+  'Is the current immigration policy in the U.S. fair and effective?',
+  'Should the government provide free college education?',
+  'Is net neutrality essential for a free and open internet?',
+  'Should the U.S. federal government ban single-use plastics?',
+  'Is the policy of affirmative action still necessary?',
+  'Should the U.S. lower the voting age to 16?',
+  'Is the current tax policy equitable for all citizens?'
 ];
 
 const SELF_REVIEW_CHECKLIST = [
@@ -64,11 +64,11 @@ function getRandomPrompt() {
   return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
 }
 
-export default function CongressPracticeSpeaking() {
+export default function PolicyPracticeSpeaking() {
   const [step, setStep] = useState<'prompt'|'think'|'record'|'review'>('prompt');
   const [prompt, setPrompt] = useState(getRandomPrompt());
   const [thinkTime, setThinkTime] = useState(10);
-  const [recordTime, setRecordTime] = useState(60); // 1 minute for Congress
+  const [recordTime, setRecordTime] = useState(60);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -111,7 +111,6 @@ export default function CongressPracticeSpeaking() {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
         Alert.alert('Permission Denied', 'Microphone permission is required.');
-        setStep('prompt');
         return;
       }
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
@@ -120,7 +119,6 @@ export default function CongressPracticeSpeaking() {
       setRecordedUri(null);
     } catch (err) {
       Alert.alert('Error', 'Could not start recording.');
-      setStep('prompt');
     }
   }
 
@@ -128,15 +126,10 @@ export default function CongressPracticeSpeaking() {
     try {
       if (recording) {
         await recording.stopAndUnloadAsync();
-        const uri = recording.getURI() || null;
-        setRecordedUri(uri);
+        setRecordedUri(recording.getURI() || null);
         setRecording(null);
-        if (!uri) {
-          Alert.alert('Error', 'No recording URI found.');
-        } else {
-          console.log('Recording URI:', uri);
-        }
         setStep('review');
+        setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
       }
     } catch (err) {
       Alert.alert('Error', 'Could not stop recording.');
@@ -149,12 +142,10 @@ export default function CongressPracticeSpeaking() {
       return;
     }
     try {
-      // Unload previous sound if any
       if (sound) {
         await sound.unloadAsync();
         setSound(null);
       }
-      // Set audio mode for playback
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
@@ -170,7 +161,6 @@ export default function CongressPracticeSpeaking() {
       newSound.setOnPlaybackStatusUpdate((status) => {
         if ('isPlaying' in status && !status.isPlaying) {
           setIsPlaying(false);
-          // Don't unload immediately, let user replay if needed
         }
       });
       await newSound.playAsync();
@@ -197,7 +187,6 @@ export default function CongressPracticeSpeaking() {
   }
 
   function handleReviewSubmit() {
-    // Compose tips message
     let tipsMsg = '';
     SELF_REVIEW_CHECKLIST.forEach((item) => {
       tipsMsg += `\n\u2022 ${item}\n`;
@@ -207,7 +196,6 @@ export default function CongressPracticeSpeaking() {
     });
     const encouragementMsg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
     tipsMsg += `\n${encouragementMsg}`;
-    // Show popup
     Alert.alert('Speaking Tips', tipsMsg, [
       { text: 'OK', onPress: () => setEncouragement(encouragementMsg) }
     ]);
@@ -227,7 +215,7 @@ export default function CongressPracticeSpeaking() {
       <View style={styles.container}>
         {step === 'prompt' && (
           <View style={styles.card}>
-            <Text style={styles.title}>Impromptu Congress Practice</Text>
+            <Text style={styles.title}>Impromptu Policy Practice</Text>
             <Text style={styles.prompt}>{prompt}</Text>
             <TouchableOpacity style={styles.button} onPress={() => setStep('think')}>
               <Text style={styles.buttonText}>Start</Text>
@@ -252,36 +240,40 @@ export default function CongressPracticeSpeaking() {
         )}
         {step === 'review' && (
           <View style={styles.card}>
-            <Text style={styles.title}>Playback & Self-Review</Text>
+            <Text style={styles.title}>Self Review</Text>
             <TouchableOpacity style={styles.button} onPress={playRecording} disabled={isPlaying}>
               <Text style={styles.buttonText}>{isPlaying ? 'Playing...' : 'Play Recording'}</Text>
             </TouchableOpacity>
-            <View style={{ width: '100%', marginTop: 16 }}>
+            <View style={styles.checklistSection}>
               {SELF_REVIEW_CHECKLIST.map((item, idx) => (
                 <TouchableOpacity key={idx} style={styles.checklistItem} onPress={() => handleChecklistToggle(idx)}>
-                  <Text style={{ color: checklist[idx] ? '#1a73e8' : '#333' }}>{checklist[idx] ? '\u2713 ' : ''}{item}</Text>
+                  <View style={[styles.checkbox, checklist[idx] && styles.checkboxChecked]} />
+                  <Text style={styles.checklistText}>{item}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={styles.subtext}>Rate yourself:</Text>
-            <Slider
-              style={{ width: '100%', height: 40 }}
-              minimumValue={1}
-              maximumValue={5}
-              step={1}
-              value={rating}
-              onValueChange={setRating}
-              minimumTrackTintColor="#1a73e8"
-              maximumTrackTintColor="#ccc"
-            />
-            <Text style={styles.subtext}>Your rating: {rating}</Text>
+            <View style={styles.ratingSection}>
+              <Text style={styles.ratingLabel}>How would you rate your performance?</Text>
+              <Slider
+                style={{ width: 200, height: 40 }}
+                minimumValue={1}
+                maximumValue={5}
+                step={1}
+                value={rating}
+                onValueChange={setRating}
+                minimumTrackTintColor="#E20000"
+                maximumTrackTintColor="#000"
+                thumbTintColor="#E20000"
+              />
+              <Text style={styles.ratingValue}>{rating} / 5</Text>
+            </View>
             <TouchableOpacity style={styles.button} onPress={handleReviewSubmit}>
-              <Text style={styles.buttonText}>Finish & Get Encouragement</Text>
+              <Text style={styles.buttonText}>Get Tips</Text>
             </TouchableOpacity>
+            <Text style={styles.encouragement}>{encouragement}</Text>
             <TouchableOpacity style={styles.button} onPress={handleTryAnother}>
               <Text style={styles.buttonText}>Try Another Prompt</Text>
             </TouchableOpacity>
-            <Text style={styles.encouragement}>{encouragement}</Text>
           </View>
         )}
       </View>
@@ -292,71 +284,108 @@ export default function CongressPracticeSpeaking() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#fff',
     padding: 16,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 12,
+    padding: 20,
     marginBottom: 16,
-    width: '100%',
+    width: 320,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 4,
+    elevation: 2,
     alignItems: 'center',
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: '#E20000',
     marginBottom: 8,
     textAlign: 'center',
   },
   prompt: {
-    fontSize: 18,
-    color: '#333',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#E20000',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 12,
-    width: '100%',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
     fontSize: 16,
+    color: '#222',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   timer: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#E20000',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtext: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: '#888',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#E20000',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  checklistSection: {
+    marginTop: 8,
+    width: '100%',
   },
   checklistItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#E20000',
+    marginRight: 8,
+    backgroundColor: '#fff',
+  },
+  checkboxChecked: {
+    backgroundColor: '#E20000',
+  },
+  checklistText: {
+    fontSize: 14,
+    color: '#222',
+  },
+  ratingSection: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  ratingLabel: {
+    fontSize: 14,
+    color: '#222',
+    marginBottom: 4,
+  },
+  ratingValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E20000',
+    marginTop: 4,
   },
   encouragement: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: 'bold',
     marginTop: 8,
     textAlign: 'center',
   },

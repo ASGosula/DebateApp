@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 
 const BUTTON_COLOR = '#E20000';
@@ -10,7 +10,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Image source={SCREENSHOT} style={styles.image} resizeMode="contain" />
       <Text style={styles.title}>Welcome to Debate App!</Text>
       <TouchableOpacity
@@ -31,7 +31,13 @@ export default function WelcomeScreen() {
       >
         <Text style={styles.buttonText}>Congress</Text>
       </TouchableOpacity>
-    </View>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push('/policy' as any)}
+      >
+        <Text style={styles.buttonText}>Policy</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
@@ -62,23 +68,24 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: BUTTON_COLOR,
-    paddingVertical: 18,
-    paddingHorizontal: 40,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
     borderRadius: 12,
-    marginVertical: 12,
-    width: '100%',
-    maxWidth: 320,
+    marginVertical: 8,
+    width: '80%',
+    maxWidth: 280,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+    alignSelf: 'center',
   },
   buttonText: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
 }); 

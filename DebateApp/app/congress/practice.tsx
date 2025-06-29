@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Text, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Text, ScrollView, SafeAreaView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
@@ -247,172 +247,146 @@ export default function CongressPractice() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.headerTitle}>Congress</ThemedText>
-          <ThemedText type="subtitle" style={styles.headerSubtitle}>Practice Debate</ThemedText>
-        </View>
+    <SafeAreaView style={{flex: 1}}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <ThemedText type="title" style={styles.headerTitle}>Congress</ThemedText>
+            <ThemedText type="subtitle" style={styles.headerSubtitle}>Practice Debate</ThemedText>
+          </View>
 
-        {/* Practice Speaking Button */}
-        <View style={{ marginBottom: 16 }}>
-          <Link href="/congress/practice-speaking" style={{ backgroundColor: '#E20000', padding: 12, borderRadius: 8, alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Practice Speaking</Text>
-          </Link>
-        </View>
+          {/* Practice Speaking Button */}
+          <View style={{ marginBottom: 16 }}>
+            <Link href={"/congress/practice-speaking" as any} style={{ backgroundColor: '#E20000', padding: 12, borderRadius: 8, alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Practice Speaking</Text>
+            </Link>
+          </View>
 
-        {/* Questioning Block Timer Card */}
-        <View style={styles.timerCard}>
-          <View style={styles.cardHeader}>
-            <ThemedText type="subtitle" style={styles.prepLabel}>Questioning Block</ThemedText>
-          </View>
-          <View style={styles.timerDisplay}>
-            <ThemedText type="title" style={styles.timerTextRed}>{formatTime(questioningLeft)}</ThemedText>
-          </View>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity 
-              style={[styles.controlButton, isQuestioningRunning && styles.activeButton]} 
-              onPress={() => setIsQuestioningRunning(true)}
-            >
-              <ThemedText style={styles.controlButtonText}>Start</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.controlButton, !isQuestioningRunning && styles.activeButton]} 
-              onPress={() => setIsQuestioningRunning(false)}
-            >
-              <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.resetButton} onPress={handleQuestioningReset}>
-              <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Speech Timer Card */}
-        <View style={styles.timerCard}>
-          <View style={styles.cardHeader}>
-            <ThemedText type="subtitle" style={styles.debateLabel}>Speech Time</ThemedText>
-          </View>
-          <View style={styles.timerDisplay}>
-            <ThemedText type="title" style={styles.debateTimerText}>{formatTime(speechLeft)}</ThemedText>
-          </View>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity 
-              style={[styles.controlButton, isSpeechRunning && styles.activeButton]} 
-              onPress={() => setIsSpeechRunning(true)}
-            >
-              <ThemedText style={styles.controlButtonText}>Start</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.controlButton, !isSpeechRunning && styles.activeButton]} 
-              onPress={() => setIsSpeechRunning(false)}
-            >
-              <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.resetButton} onPress={handleSpeechReset}>
-              <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.resetAllButton} onPress={handleResetAll}>
-            <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        {/* Sound Meter Card */}
-        <View style={styles.timerCard}>
-          <View style={styles.cardHeader}>
-            <ThemedText type="subtitle" style={styles.soundMeterLabel}>Voice Level Meter</ThemedText>
-          </View>
-          <View style={styles.soundMeterDisplay}>
-            <ThemedText type="title" style={styles.decibelText}>
-              {Math.round(decibelLevel)} dB
-            </ThemedText>
-            <ThemedText type="default" style={[styles.voiceStatusText, { color: getVoiceStatusColor() }]}> 
-              {voiceStatus}
-            </ThemedText>
-          </View>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity 
-              style={[styles.controlButton, isRecording && styles.activeButton]} 
-              onPress={startRecording}
-            >
-              <ThemedText style={styles.controlButtonText}>Start</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.controlButton, !isRecording && styles.activeButton]} 
-              onPress={stopRecording}
-            >
-              <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.volumeGuide}>
-            <ThemedText type="default" style={styles.guideText}>
-              Target: 65-75 dB (Green) | Below 65 dB: Too Low (Orange) | Above 75 dB: Too High (Red)
-            </ThemedText>
-          </View>
-        </View>
-
-        {/* Self-Review Card */}
-        <View style={styles.card}>
-          {!recording && !recordedUri && (
-            <TouchableOpacity style={styles.button} onPress={startRecording}>
-              <Text style={styles.buttonText}>Start Recording</Text>
-            </TouchableOpacity>
-          )}
-          {recording && (
-            <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopRecording}>
-              <Text style={styles.buttonText}>Stop Recording</Text>
-            </TouchableOpacity>
-          )}
-          {recordedUri && !recording && (
-            <View style={styles.playbackRow}>
-              <TouchableOpacity style={styles.button} onPress={isPlaying ? stopPlayback : playRecording}>
-                <Text style={styles.buttonText}>{isPlaying ? 'Stop Playback' : 'Play Recording'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={resetReview}>
-                <Text style={styles.buttonText}>Reset</Text>
-              </TouchableOpacity>
+          {/* Questioning Block Timer Card */}
+          <View style={styles.timerCard}>
+            <View style={styles.cardHeader}>
+              <ThemedText type="subtitle" style={styles.prepLabel}>Questioning Block</ThemedText>
             </View>
-          )}
-        </View>
-
-        {/* Self-Review Checklist */}
-        {showReview && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Self-Review Checklist</Text>
-            {SELF_REVIEW_CHECKLIST.map((item, idx) => (
-              <TouchableOpacity
-                key={item}
-                style={styles.checklistRow}
-                onPress={() => toggleChecklist(idx)}
+            <View style={styles.timerDisplay}>
+              <ThemedText type="title" style={styles.timerTextRed}>{formatTime(questioningLeft)}</ThemedText>
+            </View>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={[styles.controlButton, isQuestioningRunning && styles.activeButton]} 
+                onPress={() => setIsQuestioningRunning(true)}
               >
-                <View style={[styles.checkbox, checklist[idx] && styles.checkboxChecked]} />
-                <Text style={styles.checklistText}>{item}</Text>
+                <ThemedText style={styles.controlButtonText}>Start</ThemedText>
               </TouchableOpacity>
-            ))}
-            <Text style={styles.sectionTitle}>Rate Yourself</Text>
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>1</Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={1}
-                maximumValue={5}
-                step={1}
-                value={rating}
-                onValueChange={setRating}
-                minimumTrackTintColor="#E20000"
-                maximumTrackTintColor="#ccc"
-                thumbTintColor="#E20000"
-              />
-              <Text style={styles.ratingLabel}>5</Text>
+              <TouchableOpacity 
+                style={[styles.controlButton, !isQuestioningRunning && styles.activeButton]} 
+                onPress={() => setIsQuestioningRunning(false)}
+              >
+                <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.resetButton} onPress={handleQuestioningReset}>
+                <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.skipButton} onPress={() => setQuestioningLeft((prev) => Math.max(0, prev - 10))}>
+                <ThemedText style={styles.skipButtonText}>-10s</ThemedText>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.ratingValue}>Your Rating: {rating}</Text>
-            <Text style={styles.encouragement}>{encouragement}</Text>
           </View>
-        )}
-      </View>
-    </ScrollView>
+
+          {/* Speech Timer Card */}
+          <View style={styles.timerCard}>
+            <View style={styles.cardHeader}>
+              <ThemedText type="subtitle" style={styles.debateLabel}>Speech Time</ThemedText>
+            </View>
+            <View style={styles.timerDisplay}>
+              <ThemedText type="title" style={styles.debateTimerText}>{formatTime(speechLeft)}</ThemedText>
+            </View>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={[styles.controlButton, isSpeechRunning && styles.activeButton]} 
+                onPress={() => setIsSpeechRunning(true)}
+              >
+                <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.controlButton, !isSpeechRunning && styles.activeButton]} 
+                onPress={() => setIsSpeechRunning(false)}
+              >
+                <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.resetButton} onPress={handleSpeechReset}>
+                <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.skipButton} onPress={() => setSpeechLeft((prev) => Math.max(0, prev - 10))}>
+                <ThemedText style={styles.skipButtonText}>-10s</ThemedText>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.resetAllButton} onPress={handleResetAll}>
+              <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Self-Review Card */}
+          <View style={styles.card}>
+            {!recording && !recordedUri && (
+              <TouchableOpacity style={styles.button} onPress={startRecording}>
+                <Text style={styles.buttonText}>Start Recording</Text>
+              </TouchableOpacity>
+            )}
+            {recording && (
+              <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopRecording}>
+                <Text style={styles.buttonText}>Stop Recording</Text>
+              </TouchableOpacity>
+            )}
+            {recordedUri && !recording && (
+              <View style={styles.playbackRow}>
+                <TouchableOpacity style={styles.button} onPress={isPlaying ? stopPlayback : playRecording}>
+                  <Text style={styles.buttonText}>{isPlaying ? 'Stop Playback' : 'Play Recording'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={resetReview}>
+                  <Text style={styles.buttonText}>Reset</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Self-Review Checklist */}
+          {showReview && (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Self-Review Checklist</Text>
+              {SELF_REVIEW_CHECKLIST.map((item, idx) => (
+                <TouchableOpacity
+                  key={item}
+                  style={styles.checklistRow}
+                  onPress={() => toggleChecklist(idx)}
+                >
+                  <View style={[styles.checkbox, checklist[idx] && styles.checkboxChecked]} />
+                  <Text style={styles.checklistText}>{item}</Text>
+                </TouchableOpacity>
+              ))}
+              <Text style={styles.sectionTitle}>Rate Yourself</Text>
+              <View style={styles.ratingRow}>
+                <Text style={styles.ratingLabel}>1</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={1}
+                  maximumValue={5}
+                  step={1}
+                  value={rating}
+                  onValueChange={setRating}
+                  minimumTrackTintColor="#E20000"
+                  maximumTrackTintColor="#ccc"
+                  thumbTintColor="#E20000"
+                />
+                <Text style={styles.ratingLabel}>5</Text>
+              </View>
+              <Text style={styles.ratingValue}>Your Rating: {rating}</Text>
+              <Text style={styles.encouragement}>{encouragement}</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -492,22 +466,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
   },
   controlButton: {
     backgroundColor: '#E20000',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: 8,
+    marginLeft: 4,
+    flex: 1,
+    minWidth: 50,
+    alignItems: 'center',
   },
   activeButton: {
-    opacity: 0.7,
+    backgroundColor: '#b30000',
+    transform: [{ scale: 0.98 }],
   },
   resetButton: {
-    backgroundColor: '#666',
+    backgroundColor: '#000000',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: 8,
-    marginLeft: 8,
+    marginLeft: 4,
+    flex: 1,
+    minWidth: 50,
+    alignItems: 'center',
   },
   resetButtonText: {
     color: '#fff',
@@ -526,39 +509,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
     alignItems: 'center',
-  },
-  soundMeterLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 2,
-  },
-  soundMeterDisplay: {
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-  },
-  decibelText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#E20000',
-    textAlign: 'center',
-  },
-  voiceStatusText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-  },
-  volumeGuide: {
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  guideText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
   },
   card: {
     backgroundColor: '#ffffff',
@@ -643,5 +593,19 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
     marginTop: 8,
+  },
+  skipButton: {
+    backgroundColor: '#000000',
+    padding: 6,
+    borderRadius: 4,
+    marginLeft: 4,
+    flex: 0.8,
+    minWidth: 45,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 }); 

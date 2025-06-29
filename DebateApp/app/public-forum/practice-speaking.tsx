@@ -1,199 +1,373 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
 
-export default function PublicForumPracticeSpeaking() {
-  // Voice meter state
-  const [isRecording, setIsRecording] = useState(false);
-  const [decibelLevel, setDecibelLevel] = useState(0);
-  const [voiceStatus, setVoiceStatus] = useState('Not Recording');
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const soundMeterIntervalRef = useRef<any>(null);
+const PROMPTS = [
+  'Should social media platforms be held responsible for content posted by users?',
+  'Is the current education system preparing students for the real world?',
+  'Should the voting age be lowered to 16?',
+  'Is remote work better than in-office work?',
+  'Should professional athletes be role models?',
+  'Is artificial intelligence a threat to human jobs?',
+  'Should fast food be banned in schools?',
+  'Is climate change the most important issue of our time?',
+  'Should video games be considered a sport?',
+  'Is the internet making us more or less social?'
+];
 
-  // Voice meter logic (copied from Lincoln Douglas)
+const SELF_REVIEW_CHECKLIST = [
+  'Did you speak clearly?',
+  'Did you stay on topic?',
+  'Did you organize your thoughts?',
+  'Did you use examples?',
+  'Did you avoid filler words?'
+];
+
+const ENCOURAGEMENTS = [
+  'Great job! Keep practicing!',
+  'Remember to breathe and pace yourself.',
+  'Confidence comes with practice!',
+  'Try to make eye contact with your audience.',
+  'Strong arguments are clear and concise.'
+];
+
+const TIPS = {
+  'Did you speak clearly?': [
+    'Practice enunciating each word.',
+    'Record yourself and listen for mumbling.',
+    'Slow down your speech to improve clarity.'
+  ],
+  'Did you stay on topic?': [
+    'Write down your main point before speaking.',
+    'If you get off track, pause and return to your main idea.',
+    'Practice summarizing your answer in one sentence.'
+  ],
+  'Did you organize your thoughts?': [
+    'Use a simple structure: introduction, body, conclusion.',
+    'List your points before you start speaking.',
+    'Practice outlining your answer mentally before responding.'
+  ],
+  'Did you use examples?': [
+    'Think of a real-life story or fact to support your point.',
+    'Use phrases like "For example..." or "For instance..."',
+    'Practice connecting your ideas to things you know.'
+  ],
+  'Did you avoid filler words?': [
+    'Pause instead of saying "um" or "like".',
+    'Practice speaking slowly and deliberately.',
+    'Record yourself and count your filler words.'
+  ]
+};
+
+function getRandomPrompt() {
+  return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+}
+
+export default function PublicForumPracticeSpeaking() {
+  const [step, setStep] = useState<'prompt'|'think'|'record'|'review'>('prompt');
+  const [prompt, setPrompt] = useState(getRandomPrompt());
+  const [thinkTime, setThinkTime] = useState(10);
+  const [recordTime, setRecordTime] = useState(60);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [checklist, setChecklist] = useState<boolean[]>(Array(SELF_REVIEW_CHECKLIST.length).fill(false));
+  const [rating, setRating] = useState(3);
+  const [encouragement, setEncouragement] = useState('');
+  const thinkInterval = useRef<number | null>(null);
+  const recordInterval = useRef<number | null>(null);
+
+  // Think timer
   React.useEffect(() => {
-    if (isRecording) {
-      soundMeterIntervalRef.current = setInterval(async () => {
-        try {
-          if (recordingRef.current) {
-            const status = await recordingRef.current.getStatusAsync();
-            if (status.isRecording) {
-              // Simulate amplitude/decibel
-              const baseAmplitude = 0.1;
-              const noiseLevel = Math.random() * 0.3;
-              const voiceAmplitude = Math.random() * 0.4;
-              const amplitude = baseAmplitude + noiseLevel + voiceAmplitude;
-              const db = 20 * Math.log10(amplitude / 0.0001);
-              setDecibelLevel(Math.max(30, Math.min(80, db + 40)));
-              if (db + 40 >= 65 && db + 40 <= 75) {
-                setVoiceStatus('Good Volume');
-              } else if (db + 40 < 65) {
-                setVoiceStatus('Too Low');
-              } else {
-                setVoiceStatus('Too High');
-              }
-            }
-          }
-        } catch (error) {
-          // ignore
-        }
-      }, 200);
-    } else {
-      if (soundMeterIntervalRef.current) {
-        clearInterval(soundMeterIntervalRef.current);
-        soundMeterIntervalRef.current = null;
-      }
-      setDecibelLevel(0);
-      setVoiceStatus('Not Recording');
+    if (step === 'think' && thinkTime > 0) {
+      thinkInterval.current = window.setTimeout(() => setThinkTime(thinkTime - 1), 1000);
+    } else if (step === 'think' && thinkTime === 0) {
+      setStep('record');
+      setThinkTime(10);
+      startRecording();
     }
     return () => {
-      if (soundMeterIntervalRef.current) clearInterval(soundMeterIntervalRef.current);
+      if (thinkInterval.current !== null) clearTimeout(thinkInterval.current);
     };
-  }, [isRecording]);
+  }, [step, thinkTime]);
 
-  const startRecording = async () => {
+  // Record timer
+  React.useEffect(() => {
+    if (step === 'record' && recordTime > 0) {
+      recordInterval.current = window.setTimeout(() => setRecordTime(recordTime - 1), 1000);
+    } else if (step === 'record' && recordTime === 0) {
+      stopRecording();
+      setRecordTime(60);
+    }
+    return () => {
+      if (recordInterval.current !== null) clearTimeout(recordInterval.current);
+    };
+  }, [step, recordTime]);
+
+  async function startRecording() {
     try {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
         Alert.alert('Permission Denied', 'Microphone permission is required.');
+        setStep('prompt');
         return;
       }
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
       const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      recordingRef.current = recording;
-      setIsRecording(true);
+      setRecording(recording);
+      setRecordedUri(null);
     } catch (err) {
       Alert.alert('Error', 'Could not start recording.');
+      setStep('prompt');
     }
-  };
+  }
 
-  const stopRecording = async () => {
+  async function stopRecording() {
     try {
-      if (recordingRef.current) {
-        await recordingRef.current.stopAndUnloadAsync();
-        recordingRef.current = null;
+      if (recording) {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI() || null;
+        setRecordedUri(uri);
+        setRecording(null);
+        if (!uri) {
+          Alert.alert('Error', 'No recording URI found.');
+        } else {
+          console.log('Recording URI:', uri);
+        }
+        setStep('review');
       }
-      setIsRecording(false);
     } catch (err) {
       Alert.alert('Error', 'Could not stop recording.');
     }
-  };
+  }
 
-  const getVoiceStatusColor = () => {
-    switch (voiceStatus) {
-      case 'Good Volume':
-        return '#4CAF50';
-      case 'Too Low':
-        return '#FF9800';
-      case 'Too High':
-        return '#F44336';
-      default:
-        return '#666';
+  async function playRecording() {
+    console.log('playRecording called, recordedUri:', recordedUri);
+    if (!recordedUri) {
+      Alert.alert('Error', 'No recording found to play.');
+      return;
     }
-  };
+    try {
+      // Unload previous sound if any
+      if (sound) {
+        await sound.unloadAsync();
+        setSound(null);
+      }
+      // Set audio mode for playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        interruptionModeIOS: 1,
+        shouldDuckAndroid: true,
+        interruptionModeAndroid: 1,
+        playThroughEarpieceAndroid: false,
+      });
+      const { sound: newSound } = await Audio.Sound.createAsync({ uri: recordedUri });
+      setSound(newSound);
+      console.log('Setting isPlaying to true');
+      setIsPlaying(true);
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        console.log('Playback status update:', status);
+        if ('isPlaying' in status && !status.isPlaying) {
+          console.log('Setting isPlaying to false');
+          setIsPlaying(false);
+          // Don't unload immediately, let user replay if needed
+        }
+      });
+      await newSound.playAsync();
+      console.log('Sound started playing');
+    } catch (err) {
+      console.error('Error playing recording:', err);
+      Alert.alert('Error', 'Could not play recording. Make sure your device is not in silent mode and volume is up.');
+    }
+  }
+
+  async function stopPlayback() {
+    console.log('stopPlayback called, sound:', sound, 'isPlaying:', isPlaying);
+    try {
+      if (sound) {
+        console.log('Stopping sound...');
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
+        setIsPlaying(false);
+        console.log('Sound stopped successfully');
+      } else {
+        console.log('No sound to stop');
+      }
+    } catch (err) {
+      console.error('Error stopping playback:', err);
+      Alert.alert('Error', 'Could not stop playback.');
+    }
+  }
+
+  function handleChecklistToggle(idx: number) {
+    setChecklist(prev => prev.map((v, i) => (i === idx ? !v : v)));
+  }
+
+  function handleReviewSubmit() {
+    // Compose tips message
+    let tipsMsg = '';
+    SELF_REVIEW_CHECKLIST.forEach((item) => {
+      tipsMsg += `\n\u2022 ${item}\n`;
+      (TIPS[item as keyof typeof TIPS] as string[]).forEach((tip: string) => {
+        tipsMsg += `   - ${tip}\n`;
+      });
+    });
+    const encouragementMsg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+    tipsMsg += `\n${encouragementMsg}`;
+    // Show popup
+    Alert.alert('Speaking Tips', tipsMsg, [
+      { text: 'OK', onPress: () => setEncouragement(encouragementMsg) }
+    ]);
+  }
+
+  function handleTryAnother() {
+    setPrompt(getRandomPrompt());
+    setChecklist(Array(SELF_REVIEW_CHECKLIST.length).fill(false));
+    setRating(3);
+    setRecordedUri(null);
+    setRecordTime(60);
+    setStep('prompt');
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Public Forum Practice Speaking</Text>
-      {/* Voice Meter copied from Lincoln Douglas */}
-      <View style={styles.voiceMeterCard}>
-        <Text style={styles.voiceMeterLabel}>Voice Level Meter</Text>
-        <Text style={styles.decibelText}>{Math.round(decibelLevel)} dB</Text>
-        <Text style={[styles.voiceStatusText, { color: getVoiceStatusColor() }]}>{voiceStatus}</Text>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.controlButton, isRecording && styles.activeButton]} onPress={startRecording}>
-            <Text style={styles.controlButtonText}>Start</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.controlButton, !isRecording && styles.activeButton]} onPress={stopRecording}>
-            <Text style={styles.controlButtonText}>Stop</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.guideText}>
-          Target: 65-75 dB (Green) | Below 65 dB: Too Low (Orange) | Above 75 dB: Too High (Red)
-        </Text>
+    <SafeAreaView style={{flex: 1}}>
+      <View style={styles.container}>
+        {step === 'prompt' && (
+          <View style={styles.card}>
+            <Text style={styles.title}>Impromptu Public Forum Practice</Text>
+            <Text style={styles.prompt}>{prompt}</Text>
+            <TouchableOpacity style={styles.button} onPress={() => setStep('think')}>
+              <Text style={styles.buttonText}>Start</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {step === 'think' && (
+          <View style={styles.card}>
+            <Text style={styles.title}>Get Ready...</Text>
+            <Text style={styles.timer}>{thinkTime}s</Text>
+            <Text style={styles.subtext}>Think about your answer!</Text>
+          </View>
+        )}
+        {step === 'record' && (
+          <View style={styles.card}>
+            <Text style={styles.title}>Speak Now!</Text>
+            <Text style={styles.timer}>{recordTime}s</Text>
+            <TouchableOpacity style={styles.button} onPress={stopRecording}>
+              <Text style={styles.buttonText}>Stop Early</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {step === 'review' && (
+          <View style={styles.card}>
+            <Text style={styles.title}>Playback & Self-Review</Text>
+            <TouchableOpacity style={styles.button} onPress={playRecording} disabled={isPlaying}>
+              <Text style={styles.buttonText}>{isPlaying ? 'Playing...' : 'Play Recording'}</Text>
+            </TouchableOpacity>
+            <View style={{ width: '100%', marginTop: 16 }}>
+              {SELF_REVIEW_CHECKLIST.map((item, idx) => (
+                <TouchableOpacity key={idx} style={styles.checklistItem} onPress={() => handleChecklistToggle(idx)}>
+                  <Text style={{ color: checklist[idx] ? '#1a73e8' : '#333' }}>{checklist[idx] ? '\u2713 ' : ''}{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.subtext}>Rate yourself:</Text>
+            <Slider
+              style={{ width: '100%', height: 40 }}
+              minimumValue={1}
+              maximumValue={5}
+              step={1}
+              value={rating}
+              onValueChange={setRating}
+              minimumTrackTintColor="#1a73e8"
+              maximumTrackTintColor="#ccc"
+            />
+            <Text style={styles.subtext}>Your rating: {rating}</Text>
+            <TouchableOpacity style={styles.button} onPress={handleReviewSubmit}>
+              <Text style={styles.buttonText}>Finish & Get Encouragement</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={handleTryAnother}>
+              <Text style={styles.buttonText}>Try Another Prompt</Text>
+            </TouchableOpacity>
+            <Text style={styles.encouragement}>{encouragement}</Text>
+          </View>
+        )}
       </View>
-      <Text style={styles.text}>This is a placeholder for the Practice Speaking feature. Add your speaking practice tools here!</Text>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
+  },
+  card: {
     backgroundColor: '#fff',
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#E20000',
-    textAlign: 'center',
-  },
-  voiceMeterCard: {
-    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 20,
-    marginBottom: 24,
-    alignItems: 'center',
     width: '100%',
     maxWidth: 400,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 2,
+    marginBottom: 16,
   },
-  voiceMeterLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#E20000',
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
     marginBottom: 8,
   },
-  decibelText: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  prompt: {
+    fontSize: 18,
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  timer: {
+    fontSize: 36,
     color: '#E20000',
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  subtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
     marginBottom: 4,
   },
-  voiceStatusText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  controlButton: {
+  button: {
     backgroundColor: '#E20000',
     paddingVertical: 10,
-    paddingHorizontal: 18,
+    paddingHorizontal: 24,
     borderRadius: 8,
-    marginHorizontal: 6,
-    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 4,
   },
-  activeButton: {
-    opacity: 0.7,
-  },
-  controlButtonText: {
+  buttonText: {
     color: '#fff',
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: '600',
   },
-  guideText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 8,
+  checklistItem: {
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
   },
-  text: {
-    fontSize: 18,
-    color: '#222',
+  encouragement: {
+    color: '#1a73e8',
+    fontWeight: '500',
+    marginTop: 12,
     textAlign: 'center',
   },
 }); 

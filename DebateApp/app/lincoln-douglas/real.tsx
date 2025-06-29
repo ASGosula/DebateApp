@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, SafeAreaView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 
 const PREP_TIME_SECONDS = 4 * 60; // 4 minutes
@@ -111,77 +111,85 @@ export default function LincolnDouglasReal() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <ThemedText type="title" style={styles.headerTitle}>Lincoln Douglas</ThemedText>
-        <ThemedText type="subtitle" style={styles.headerSubtitle}>Real Debate</ThemedText>
-      </View>
+    <SafeAreaView style={{flex: 1}}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.headerTitle}>Lincoln Douglas</ThemedText>
+          <ThemedText type="subtitle" style={styles.headerSubtitle}>Real Debate</ThemedText>
+        </View>
 
-      {/* Prep Timer Card */}
-      <View style={styles.timerCard}>
-        <View style={styles.cardHeader}>
-          <ThemedText type="subtitle" style={styles.prepLabel}>Prep Time</ThemedText>
+        {/* Prep Timer Card */}
+        <View style={styles.timerCard}>
+          <View style={styles.cardHeader}>
+            <ThemedText type="subtitle" style={styles.prepLabel}>Prep Time</ThemedText>
+          </View>
+          <View style={styles.timerDisplay}>
+            <ThemedText type="title" style={styles.timerTextRed}>{formatTime(prepTimeLeft)}</ThemedText>
+          </View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.controlButton, isPrepRunning && styles.activeButton]} 
+              onPress={() => setIsPrepRunning(true)}
+            >
+              <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.controlButton, !isPrepRunning && styles.activeButton]} 
+              onPress={() => setIsPrepRunning(false)}
+            >
+              <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.resetButton} onPress={handlePrepReset}>
+              <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.skipButton} onPress={() => setPrepTimeLeft((prev) => Math.max(0, prev - 10))}>
+              <ThemedText style={styles.skipButtonText}>-10s</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.timerDisplay}>
-          <ThemedText type="title" style={styles.timerTextRed}>{formatTime(prepTimeLeft)}</ThemedText>
-        </View>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity 
-            style={[styles.controlButton, isPrepRunning && styles.activeButton]} 
-            onPress={() => setIsPrepRunning(true)}
-          >
-            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.controlButton, !isPrepRunning && styles.activeButton]} 
-            onPress={() => setIsPrepRunning(false)}
-          >
-            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.resetButton} onPress={handlePrepReset}>
-            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      {/* Debate Timer Card */}
-      <View style={styles.timerCard}>
-        <View style={styles.cardHeader}>
-          <ThemedText type="subtitle" style={styles.debateLabel}>
-            {debateSections[currentSectionIndex].label}
-          </ThemedText>
-          <ThemedText type="default" style={styles.sectionInfo}>
-            Section {currentSectionIndex + 1} of {debateSections.length}
-          </ThemedText>
-        </View>
-        <View style={styles.timerDisplay}>
-          <ThemedText type="title" style={styles.debateTimerText}>
-            {formatTime(debateTimeLeft)}
-          </ThemedText>
-        </View>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity 
-            style={[styles.controlButton, isDebateRunning && styles.activeButton]} 
-            onPress={handleDebateStart}
-          >
-            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+        {/* Debate Timer Card */}
+        <View style={styles.timerCard}>
+          <View style={styles.cardHeader}>
+            <ThemedText type="subtitle" style={styles.debateLabel}>
+              {debateSections[currentSectionIndex].label}
+            </ThemedText>
+            <ThemedText type="default" style={styles.sectionInfo}>
+              Section {currentSectionIndex + 1} of {debateSections.length}
+            </ThemedText>
+          </View>
+          <View style={styles.timerDisplay}>
+            <ThemedText type="title" style={styles.debateTimerText}>
+              {formatTime(debateTimeLeft)}
+            </ThemedText>
+          </View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.controlButton, isDebateRunning && styles.activeButton]} 
+              onPress={handleDebateStart}
+            >
+              <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.controlButton, !isDebateRunning && styles.activeButton]} 
+              onPress={handleDebateStop}
+            >
+              <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.resetButton} onPress={handleDebateReset}>
+              <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.skipButton} onPress={() => setDebateTimeLeft((prev) => Math.max(prev - 10, 0))}>
+              <ThemedText style={styles.skipButtonText}>-10s</ThemedText>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.resetAllButton} onPress={handleDebateResetAll}>
+            <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.controlButton, !isDebateRunning && styles.activeButton]} 
-            onPress={handleDebateStop}
-          >
-            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.resetButton} onPress={handleDebateReset}>
-            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
-          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.resetAllButton} onPress={handleDebateResetAll}>
-          <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
-        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -266,12 +274,13 @@ const styles = StyleSheet.create({
   },
   controlButton: {
     backgroundColor: '#E20000',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     borderRadius: 10,
     flex: 1,
-    marginHorizontal: 3,
+    marginHorizontal: 2,
     alignItems: 'center',
+    minWidth: 60,
     shadowColor: '#E20000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -284,18 +293,19 @@ const styles = StyleSheet.create({
   },
   controlButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
   resetButton: {
     backgroundColor: '#000000',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     borderRadius: 10,
     flex: 1,
-    marginHorizontal: 3,
+    marginHorizontal: 2,
     alignItems: 'center',
+    minWidth: 60,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -319,5 +329,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
+  },
+  skipButton: {
+    backgroundColor: '#000000',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    flex: 1,
+    marginHorizontal: 2,
+    alignItems: 'center',
+    minWidth: 60,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  skipButtonText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 }); 

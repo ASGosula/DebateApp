@@ -5,21 +5,22 @@ import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
 import { Link } from 'expo-router';
 
-const PREP_TIME_SECONDS = 3 * 60; // 3 minutes
+const PREP_TIME_SECONDS = 8 * 60; // 8 minutes per team
 const { width } = Dimensions.get('window');
 
 const debateSections = [
-  { label: '1AC', duration: 4 * 60 },
-  { label: '1NC', duration: 4 * 60 },
-  { label: '1st Crossfire', duration: 3 * 60 },
-  { label: '1AR', duration: 4 * 60 },
-  { label: '1NR', duration: 4 * 60 },
-  { label: '2nd Crossfire', duration: 3 * 60 },
-  { label: '2AR', duration: 2 * 60 },
-  { label: '2NR', duration: 2 * 60 },
-  { label: 'Grand Crossfire', duration: 3 * 60 },
-  { label: '1FF', duration: 2 * 60 },
-  { label: '2FF', duration: 2 * 60 },
+  { label: '1AC – 8 minutes (partner #1 on the affirmative reads)', duration: 8 * 60 },
+  { label: 'Cross-Examination – 3 minutes (partner #2 on the negative asks)', duration: 3 * 60 },
+  { label: '1NC – 8 minutes (partner #1 on the negative reads)', duration: 8 * 60 },
+  { label: 'Cross-Examination – 3 minutes (partner #1 on the affirmative asks)', duration: 3 * 60 },
+  { label: '2AC – 8 minutes (partner #2 on the affirmative reads)', duration: 8 * 60 },
+  { label: 'Cross-Examination – 3 minutes (partner #1 on the negative asks)', duration: 3 * 60 },
+  { label: '2NC – 8 minutes (partner #2 on the negative reads)', duration: 8 * 60 },
+  { label: 'Cross-Examination – 3 minutes (partner #2 on the affirmative asks)', duration: 3 * 60 },
+  { label: '1NR – 5 minutes (partner #1 on the negative reads)', duration: 5 * 60 },
+  { label: '1AR – 5 minutes (partner #1 on the affirmative reads)', duration: 5 * 60 },
+  { label: '2NR – 5 minutes (partner #2 on the negative reads)', duration: 5 * 60 },
+  { label: '2AR – 5 minutes (partner #2 on the affirmative reads)', duration: 5 * 60 },
 ];
 
 const SELF_REVIEW_CHECKLIST = [
@@ -52,7 +53,7 @@ function calculateDecibels(amplitude: number): number {
   return Math.max(30, Math.min(80, db + 40));
 }
 
-export default function PublicForumPractice() {
+export default function PolicyDebatePractice() {
   // Prep timer state
   const [prepTimeLeft, setPrepTimeLeft] = useState(PREP_TIME_SECONDS);
   const [isPrepRunning, setIsPrepRunning] = useState(false);
@@ -126,6 +127,7 @@ export default function PublicForumPractice() {
     setDebateTimeLeft(debateSections[currentSectionIndex].duration);
   }, [currentSectionIndex]);
 
+  // Sound meter logic
   useEffect(() => {
     if (isRecording) {
       soundMeterIntervalRef.current = setInterval(async () => {
@@ -275,13 +277,13 @@ export default function PublicForumPractice() {
   const getVoiceStatusColor = () => {
     switch (voiceStatus) {
       case 'Good Volume':
-        return '#4CAF50'; // Green
+        return '#4CAF50';
       case 'Too Low':
-        return '#FF9800'; // Orange
+        return '#FF9800';
       case 'Too High':
-        return '#F44336'; // Red
+        return '#F44336';
       default:
-        return '#666'; // Gray
+        return '#666';
     }
   };
 
@@ -291,13 +293,13 @@ export default function PublicForumPractice() {
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
-            <ThemedText type="title" style={styles.headerTitle}>Public Forum</ThemedText>
+            <ThemedText type="title" style={styles.headerTitle}>Policy</ThemedText>
             <ThemedText type="subtitle" style={styles.headerSubtitle}>Practice Debate</ThemedText>
           </View>
 
           {/* Practice Speaking Button */}
           <View style={{ marginBottom: 16 }}>
-            <Link href={"/public-forum/practice-speaking" as any} style={{ backgroundColor: '#E20000', padding: 12, borderRadius: 8, alignItems: 'center' }}>
+            <Link href={"/policy/practice-speaking" as any} style={{ backgroundColor: '#E20000', padding: 12, borderRadius: 8, alignItems: 'center' }}>
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Practice Speaking</Text>
             </Link>
           </View>
@@ -335,7 +337,7 @@ export default function PublicForumPractice() {
           {/* Debate Timer Card */}
           <View style={styles.timerCard}>
             <View style={styles.cardHeader}>
-              <ThemedText type="subtitle" style={styles.debateLabel}>
+              <ThemedText type="subtitle" style={styles.debateLabel} numberOfLines={3}>
                 {debateSections[currentSectionIndex].label}
               </ThemedText>
               <ThemedText type="default" style={styles.sectionInfo}>
@@ -343,9 +345,7 @@ export default function PublicForumPractice() {
               </ThemedText>
             </View>
             <View style={styles.timerDisplay}>
-              <ThemedText type="title" style={styles.debateTimerText}>
-                {formatTime(debateTimeLeft)}
-              </ThemedText>
+              <ThemedText type="title" style={styles.timerText}>{formatTime(debateTimeLeft)}</ThemedText>
             </View>
             <View style={styles.buttonRow}>
               <TouchableOpacity 
@@ -363,7 +363,7 @@ export default function PublicForumPractice() {
               <TouchableOpacity style={styles.resetButton} onPress={handleDebateReset}>
                 <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.skipButton} onPress={() => setDebateTimeLeft((prev) => Math.max(prev - 10, 0))}>
+              <TouchableOpacity style={styles.skipButton} onPress={() => setDebateTimeLeft((prev) => Math.max(0, prev - 10))}>
                 <ThemedText style={styles.skipButtonText}>-10s</ThemedText>
               </TouchableOpacity>
             </View>
@@ -372,62 +372,74 @@ export default function PublicForumPractice() {
             </TouchableOpacity>
           </View>
 
-          {/* Self-Review Card */}
-          <View style={styles.card}>
+          {/* Recording Section */}
+          <View style={styles.timerCard}>
+            <View style={styles.cardHeader}>
+              <ThemedText type="subtitle" style={styles.recordingLabel}>Recording</ThemedText>
+            </View>
             {!recording && !recordedUri && (
-              <TouchableOpacity style={styles.button} onPress={startRecording}>
-                <Text style={styles.buttonText}>Start Recording</Text>
+              <TouchableOpacity style={styles.recordingButton} onPress={startRecording}>
+                <ThemedText style={styles.recordingButtonText}>Start Recording</ThemedText>
               </TouchableOpacity>
             )}
             {recording && (
-              <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopRecording}>
-                <Text style={styles.buttonText}>Stop Recording</Text>
+              <TouchableOpacity style={styles.stopRecordingButton} onPress={stopRecording}>
+                <ThemedText style={styles.recordingButtonText}>Stop Recording</ThemedText>
               </TouchableOpacity>
             )}
             {recordedUri && !recording && (
               <View style={styles.playbackRow}>
-                <TouchableOpacity style={styles.button} onPress={isPlaying ? stopPlayback : playRecording}>
-                  <Text style={styles.buttonText}>{isPlaying ? 'Stop Playback' : 'Play Recording'}</Text>
+                <TouchableOpacity style={styles.recordingButton} onPress={isPlaying ? stopPlayback : playRecording}>
+                  <ThemedText style={styles.recordingButtonText}>{isPlaying ? 'Stop Playback' : 'Play Recording'}</ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={resetReview}>
-                  <Text style={styles.buttonText}>Reset</Text>
+                <TouchableOpacity style={styles.recordingButton} onPress={resetReview}>
+                  <ThemedText style={styles.recordingButtonText}>Reset</ThemedText>
                 </TouchableOpacity>
               </View>
             )}
           </View>
 
-          {/* Self-Review Checklist */}
+          {/* Self-Review Card */}
           {showReview && (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Self-Review Checklist</Text>
-              {SELF_REVIEW_CHECKLIST.map((item, idx) => (
-                <TouchableOpacity
-                  key={item}
-                  style={styles.checklistRow}
-                  onPress={() => toggleChecklist(idx)}
-                >
-                  <View style={[styles.checkbox, checklist[idx] && styles.checkboxChecked]} />
-                  <Text style={styles.checklistText}>{item}</Text>
-                </TouchableOpacity>
-              ))}
-              <Text style={styles.sectionTitle}>Rate Yourself</Text>
-              <View style={styles.ratingRow}>
-                <Text style={styles.ratingLabel}>1</Text>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={1}
-                  maximumValue={5}
-                  step={1}
-                  value={rating}
-                  onValueChange={setRating}
-                  minimumTrackTintColor="#E20000"
-                  maximumTrackTintColor="#ccc"
-                  thumbTintColor="#E20000"
-                />
-                <Text style={styles.ratingLabel}>5</Text>
+            <View style={styles.timerCard}>
+              <View style={styles.cardHeader}>
+                <ThemedText type="subtitle" style={styles.reviewLabel}>Self Review</ThemedText>
               </View>
-              <Text style={styles.ratingValue}>Your Rating: {rating}</Text>
-              <Text style={styles.encouragement}>{encouragement}</Text>
+              <View style={styles.reviewSection}>
+                <ThemedText type="default" style={styles.encouragementText}>{encouragement}</ThemedText>
+                <TouchableOpacity style={styles.playButton} onPress={playRecording} disabled={isPlaying}>
+                  <ThemedText style={styles.playButtonText}>{isPlaying ? 'Playing...' : 'Play Recording'}</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.stopButton} onPress={stopPlayback} disabled={!isPlaying}>
+                  <ThemedText style={styles.stopButtonText}>Stop</ThemedText>
+                </TouchableOpacity>
+                <View style={styles.checklistSection}>
+                  {SELF_REVIEW_CHECKLIST.map((item, idx) => (
+                    <TouchableOpacity key={idx} style={styles.checklistItem} onPress={() => toggleChecklist(idx)}>
+                      <View style={[styles.checkbox, checklist[idx] && styles.checkboxChecked]} />
+                      <ThemedText style={styles.checklistText}>{item}</ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={styles.ratingSection}>
+                  <ThemedText style={styles.ratingLabel}>How would you rate your performance?</ThemedText>
+                  <Slider
+                    style={{ width: width * 0.6, height: 40 }}
+                    minimumValue={1}
+                    maximumValue={5}
+                    step={1}
+                    value={rating}
+                    onValueChange={setRating}
+                    minimumTrackTintColor="#E20000"
+                    maximumTrackTintColor="#000"
+                    thumbTintColor="#E20000"
+                  />
+                  <ThemedText style={styles.ratingValue}>{rating} / 5</ThemedText>
+                </View>
+                <TouchableOpacity style={styles.resetReviewButton} onPress={resetReview}>
+                  <ThemedText style={styles.resetReviewButtonText}>Reset Review</ThemedText>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -438,80 +450,73 @@ export default function PublicForumPractice() {
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    flexGrow: 1,
+    paddingBottom: 32,
   },
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    paddingHorizontal: 12,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingTop: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#1a1a1a',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     fontWeight: '500',
   },
   timerCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   cardHeader: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   prepLabel: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   debateLabel: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#000000',
-    marginBottom: 1,
-  },
-  soundMeterLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   sectionInfo: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#666',
     fontWeight: '500',
   },
   timerDisplay: {
     alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 8,
+    marginBottom: 16,
+    paddingVertical: 12,
     backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    borderRadius: 12,
   },
-  soundMeterDisplay: {
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 8,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+  timerText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#E20000',
+    textAlign: 'center',
   },
   timerTextRed: {
     fontSize: 28,
@@ -519,45 +524,27 @@ const styles = StyleSheet.create({
     color: '#E20000',
     textAlign: 'center',
   },
-  debateTimerText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#E20000',
-    textAlign: 'center',
-  },
-  decibelText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#E20000',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  voiceStatusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
     flexWrap: 'wrap',
   },
   controlButton: {
     backgroundColor: '#E20000',
-    paddingVertical: 6,
-    paddingHorizontal: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
     flex: 1,
-    marginHorizontal: 1,
+    marginHorizontal: 2,
     alignItems: 'center',
-    minWidth: 50,
     shadowColor: '#E20000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 4,
+    minWidth: 60,
   },
   activeButton: {
     backgroundColor: '#b30000',
@@ -565,24 +552,24 @@ const styles = StyleSheet.create({
   },
   controlButtonText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
   resetButton: {
     backgroundColor: '#000000',
-    paddingVertical: 6,
-    paddingHorizontal: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
     flex: 1,
-    marginHorizontal: 1,
+    marginHorizontal: 2,
     alignItems: 'center',
-    minWidth: 50,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 4,
+    minWidth: 60,
   },
   resetButtonText: {
     color: '#fff',
@@ -590,139 +577,198 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
+  skipButton: {
+    backgroundColor: '#000000',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 2,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    minWidth: 60,
+  },
+  skipButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
   resetAllButton: {
+    backgroundColor: '#E20000',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#E20000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  soundMeterLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E20000',
+    marginBottom: 2,
+  },
+  soundMeterDisplay: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  decibelText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  voiceStatusText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  volumeGuide: {
+    marginTop: 4,
+  },
+  guideText: {
+    fontSize: 12,
+    color: '#888',
+  },
+  reviewLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E20000',
+    marginBottom: 2,
+  },
+  reviewSection: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  encouragementText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    marginBottom: 8,
+    fontWeight: 'bold',
+  },
+  playButton: {
     backgroundColor: '#E20000',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
-    shadowColor: '#E20000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
+    marginBottom: 8,
   },
-  volumeGuide: {
-    marginTop: 6,
-    padding: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 6,
-  },
-  guideText: {
-    fontSize: 10,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 1,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  button: {
-    backgroundColor: '#E20000',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-    marginBottom: 6,
-    marginRight: 8,
-  },
-  buttonText: {
+  playButtonText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   stopButton: {
-    backgroundColor: '#222',
+    backgroundColor: '#b30000',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginHorizontal: 4,
   },
-  playbackRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
+  stopButtonText: {
+    color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
-    marginTop: 8,
-    marginBottom: 4,
-    color: '#1a1a1a',
+    fontSize: 14,
   },
-  checklistRow: {
+  checklistSection: {
+    marginTop: 8,
+    width: '100%',
+  },
+  checklistItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     borderRadius: 4,
     borderWidth: 2,
     borderColor: '#E20000',
-    marginRight: 10,
+    marginRight: 8,
     backgroundColor: '#fff',
   },
   checkboxChecked: {
     backgroundColor: '#E20000',
   },
   checklistText: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#222',
   },
-  ratingRow: {
-    flexDirection: 'row',
+  ratingSection: {
+    marginTop: 8,
     alignItems: 'center',
-    marginVertical: 8,
   },
   ratingLabel: {
     fontSize: 14,
-    color: '#E20000',
-    fontWeight: 'bold',
-    marginHorizontal: 4,
-  },
-  slider: {
-    flex: 1,
-    marginHorizontal: 8,
+    color: '#222',
+    marginBottom: 4,
   },
   ratingValue: {
-    fontSize: 15,
-    color: '#1a1a1a',
-    marginTop: 2,
-    marginBottom: 8,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E20000',
+    marginTop: 4,
   },
-  encouragement: {
-    fontSize: 14,
-    color: '#008000',
-    fontWeight: '600',
-    marginTop: 8,
-    alignSelf: 'center',
-  },
-  skipButton: {
-    backgroundColor: '#000000',
-    paddingVertical: 6,
-    paddingHorizontal: 6,
+  resetReviewButton: {
+    backgroundColor: '#E20000',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 8,
-    flex: 0.8,
-    marginHorizontal: 1,
-    alignItems: 'center',
-    minWidth: 45,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
+    marginTop: 8,
   },
-  skipButtonText: {
+  resetReviewButtonText: {
     color: '#fff',
-    fontSize: 11,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  recordingLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E20000',
+    marginBottom: 2,
+  },
+  recordingButton: {
+    backgroundColor: '#E20000',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#E20000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  recordingButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  stopRecordingButton: {
+    backgroundColor: '#b30000',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#b30000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  playbackRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
   },
 }); 

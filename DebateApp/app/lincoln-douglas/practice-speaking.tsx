@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess } from 'expo-av';
 import Slider from '@react-native-community/slider';
 
@@ -179,6 +179,19 @@ export default function PracticeSpeaking() {
     }
   }
 
+  async function stopPlayback() {
+    try {
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
+        setIsPlaying(false);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Could not stop playback.');
+    }
+  }
+
   function handleChecklistToggle(idx: number) {
     setChecklist(prev => prev.map((v, i) => (i === idx ? !v : v)));
   }
@@ -210,67 +223,69 @@ export default function PracticeSpeaking() {
   }
 
   return (
-    <View style={styles.container}>
-      {step === 'prompt' && (
-        <View style={styles.card}>
-          <Text style={styles.title}>Impromptu Practice</Text>
-          <Text style={styles.prompt}>{prompt}</Text>
-          <TouchableOpacity style={styles.button} onPress={() => setStep('think')}>
-            <Text style={styles.buttonText}>Start</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {step === 'think' && (
-        <View style={styles.card}>
-          <Text style={styles.title}>Get Ready...</Text>
-          <Text style={styles.timer}>{thinkTime}s</Text>
-          <Text style={styles.subtext}>Think about your answer!</Text>
-        </View>
-      )}
-      {step === 'record' && (
-        <View style={styles.card}>
-          <Text style={styles.title}>Speak Now!</Text>
-          <Text style={styles.timer}>{recordTime}s</Text>
-          <TouchableOpacity style={styles.button} onPress={stopRecording}>
-            <Text style={styles.buttonText}>Stop Early</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {step === 'review' && (
-        <View style={styles.card}>
-          <Text style={styles.title}>Playback & Self-Review</Text>
-          <TouchableOpacity style={styles.button} onPress={playRecording} disabled={isPlaying}>
-            <Text style={styles.buttonText}>{isPlaying ? 'Playing...' : 'Play Recording'}</Text>
-          </TouchableOpacity>
-          <View style={{ width: '100%', marginTop: 16 }}>
-            {SELF_REVIEW_CHECKLIST.map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.checklistItem} onPress={() => handleChecklistToggle(idx)}>
-                <Text style={{ color: checklist[idx] ? '#1a73e8' : '#333' }}>{checklist[idx] ? '\u2713 ' : ''}{item}</Text>
-              </TouchableOpacity>
-            ))}
+    <SafeAreaView style={{flex: 1}}>
+      <View style={styles.container}>
+        {step === 'prompt' && (
+          <View style={styles.card}>
+            <Text style={styles.title}>Impromptu Practice</Text>
+            <Text style={styles.prompt}>{prompt}</Text>
+            <TouchableOpacity style={styles.button} onPress={() => setStep('think')}>
+              <Text style={styles.buttonText}>Start</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.subtext}>Rate yourself:</Text>
-          <Slider
-            style={{ width: '100%', height: 40 }}
-            minimumValue={1}
-            maximumValue={5}
-            step={1}
-            value={rating}
-            onValueChange={setRating}
-            minimumTrackTintColor="#1a73e8"
-            maximumTrackTintColor="#ccc"
-          />
-          <Text style={styles.subtext}>Your rating: {rating}</Text>
-          <TouchableOpacity style={styles.button} onPress={handleReviewSubmit}>
-            <Text style={styles.buttonText}>Finish & Get Encouragement</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleTryAnother}>
-            <Text style={styles.buttonText}>Try Another Prompt</Text>
-          </TouchableOpacity>
-          <Text style={styles.encouragement}>{encouragement}</Text>
-        </View>
-      )}
-    </View>
+        )}
+        {step === 'think' && (
+          <View style={styles.card}>
+            <Text style={styles.title}>Get Ready...</Text>
+            <Text style={styles.timer}>{thinkTime}s</Text>
+            <Text style={styles.subtext}>Think about your answer!</Text>
+          </View>
+        )}
+        {step === 'record' && (
+          <View style={styles.card}>
+            <Text style={styles.title}>Speak Now!</Text>
+            <Text style={styles.timer}>{recordTime}s</Text>
+            <TouchableOpacity style={styles.button} onPress={stopRecording}>
+              <Text style={styles.buttonText}>Stop Early</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {step === 'review' && (
+          <View style={styles.card}>
+            <Text style={styles.title}>Playback & Self-Review</Text>
+            <TouchableOpacity style={styles.button} onPress={playRecording} disabled={isPlaying}>
+              <Text style={styles.buttonText}>{isPlaying ? 'Playing...' : 'Play Recording'}</Text>
+            </TouchableOpacity>
+            <View style={{ width: '100%', marginTop: 16 }}>
+              {SELF_REVIEW_CHECKLIST.map((item, idx) => (
+                <TouchableOpacity key={idx} style={styles.checklistItem} onPress={() => handleChecklistToggle(idx)}>
+                  <Text style={{ color: checklist[idx] ? '#1a73e8' : '#333' }}>{checklist[idx] ? '\u2713 ' : ''}{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.subtext}>Rate yourself:</Text>
+            <Slider
+              style={{ width: '100%', height: 40 }}
+              minimumValue={1}
+              maximumValue={5}
+              step={1}
+              value={rating}
+              onValueChange={setRating}
+              minimumTrackTintColor="#1a73e8"
+              maximumTrackTintColor="#ccc"
+            />
+            <Text style={styles.subtext}>Your rating: {rating}</Text>
+            <TouchableOpacity style={styles.button} onPress={handleReviewSubmit}>
+              <Text style={styles.buttonText}>Finish & Get Encouragement</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={handleTryAnother}>
+              <Text style={styles.buttonText}>Try Another Prompt</Text>
+            </TouchableOpacity>
+            <Text style={styles.encouragement}>{encouragement}</Text>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
