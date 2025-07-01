@@ -312,6 +312,11 @@ export default function LincolnDouglasPractice() {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
+        {/* Swipe to go back indicator */}
+        <View style={styles.swipeIndicator}>
+          <ThemedText style={styles.swipeText}>← Swipe to go back</ThemedText>
+        </View>
+
         {/* Header */}
         <View style={styles.header}>
           <ThemedText type="title" style={styles.headerTitle}>Lincoln Douglas</ThemedText>
@@ -495,6 +500,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     paddingHorizontal: 12,
     paddingTop: 20,
+  },
+  swipeIndicator: {
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingVertical: 8,
+  },
+  swipeText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
   },
   header: {
     alignItems: 'center',

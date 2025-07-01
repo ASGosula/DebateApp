@@ -24,6 +24,8 @@ export default function RootLayout() {
         <Stack.Screen name="lincoln-douglas" />
         <Stack.Screen name="public-forum" />
         <Stack.Screen name="congress" />
+        <Stack.Screen name="resources" />
+        <Stack.Screen name="practice" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

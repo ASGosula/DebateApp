@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess } from 'expo-av';
 import Slider from '@react-native-community/slider';
+import { ThemedText } from '@/components/ThemedText';
 
 const PROMPTS = [
   'Should school uniforms be mandatory?',
@@ -211,6 +212,10 @@ export default function PracticeSpeaking() {
 
   return (
     <View style={styles.container}>
+      {/* Swipe to go back indicator */}
+      <View style={styles.swipeIndicator}>
+        <ThemedText style={styles.swipeText}>← Swipe to go back</ThemedText>
+      </View>
       {step === 'prompt' && (
         <View style={styles.card}>
           <Text style={styles.title}>Impromptu Practice</Text>
@@ -276,6 +281,16 @@ export default function PracticeSpeaking() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f9fa', justifyContent: 'center', alignItems: 'center', padding: 16 },
+  swipeIndicator: {
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingVertical: 8,
+  },
+  swipeText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 2, marginBottom: 16 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 8 },
   prompt: { fontSize: 18, color: '#333', marginBottom: 16, textAlign: 'center' },

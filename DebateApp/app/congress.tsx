@@ -10,14 +10,29 @@ export default function CongressScreen() {
   const router = useRouter();
   return (
     <View style={styles.container}>
-      <Image source={SCREENSHOT} style={styles.image} resizeMode="contain" />
-      <Text style={styles.title}>Congress</Text>
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/congress/real')}>
-        <Text style={styles.buttonText}>Real Debate Congress</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/congress/practice')}>
-        <Text style={styles.buttonText}>Practice Debate Congress</Text>
-      </TouchableOpacity>
+      {/* Header with Back Button */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Congress</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {/* Main Content */}
+      <View style={styles.content}>
+        <Image source={SCREENSHOT} style={styles.image} resizeMode="contain" />
+        <Text style={styles.title}>Congress</Text>
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/congress/real')}>
+          <Text style={styles.buttonText}>Real Debate Congress</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/congress/practice')}>
+          <Text style={styles.buttonText}>Practice Debate Congress</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -25,9 +40,39 @@ export default function CongressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#E20000',
+    fontWeight: '600',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  headerSpacer: {
+    width: 60,
+  },
+  content: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
     padding: 24,
   },
   image: {
