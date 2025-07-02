@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 
 const BUTTON_COLOR = '#E20000';
@@ -14,7 +14,8 @@ export default function ResourcesScreen() {
       id: 1,
       title: "Debate Rules & Guidelines",
       description: "Official rules and guidelines for different debate formats",
-      category: "Rules"
+      category: "Rules",
+      url: "https://docs.google.com/document/d/1hq7-DE6ls2ryVtOttxR4BNpRdP7xUbBr0M3SMYefek8/edit?tab=t.0"
     },
     {
       id: 2,
@@ -23,28 +24,18 @@ export default function ResourcesScreen() {
       category: "Research"
     },
     {
-      id: 3,
-      title: "Sample Cases",
-      description: "Example cases and arguments for practice",
-      category: "Examples"
-    },
-    {
-      id: 4,
-      title: "Video Tutorials",
-      description: "Instructional videos on debate techniques",
-      category: "Learning"
-    },
-    {
       id: 5,
       title: "Tournament Calendar",
       description: "Upcoming tournaments and registration information",
-      category: "Events"
+      category: "Events",
+      url: "https://www.tabroom.com/index/index.mhtml"
     },
     {
       id: 6,
       title: "Team Directory",
       description: "Contact information for debate teams and coaches",
-      category: "Contacts"
+      category: "Contacts",
+      url: "https://slack.com"
     }
   ];
 
@@ -73,12 +64,20 @@ export default function ResourcesScreen() {
         {/* Resources Grid */}
         <View style={styles.resourcesGrid}>
           {resources.map((resource) => (
-            <TouchableOpacity key={resource.id} style={styles.resourceCard}>
+            <TouchableOpacity
+              key={resource.id}
+              style={styles.resourceCard}
+              onPress={() => resource.url && Linking.openURL(resource.url)}
+              disabled={!resource.url}
+            >
               <View style={styles.resourceHeader}>
                 <Text style={styles.resourceCategory}>{resource.category}</Text>
               </View>
               <Text style={styles.resourceTitle}>{resource.title}</Text>
               <Text style={styles.resourceDescription}>{resource.description}</Text>
+              {resource.title === 'Research Databases' && (
+                <Text style={{ color: '#E20000', marginTop: 6, fontWeight: 'bold' }}>Work in progress</Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -86,13 +85,13 @@ export default function ResourcesScreen() {
         {/* Quick Links */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🔗 Quick Links</Text>
-          <TouchableOpacity style={styles.linkButton}>
+          <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL('https://www.speechanddebate.org')}>
             <Text style={styles.linkButtonText}>National Speech & Debate Association</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.linkButton}>
+          <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL('https://debate-central.ncpathinktank.org')}>
             <Text style={styles.linkButtonText}>Debate Central</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.linkButton}>
+          <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL('https://www.youtube.com/c/NationalSpeechDebateAssociation')}>
             <Text style={styles.linkButtonText}>Debate Videos</Text>
           </TouchableOpacity>
         </View>
