@@ -27,10 +27,10 @@ export default function CongressScreen() {
         <Image source={SCREENSHOT} style={styles.image} resizeMode="contain" />
         <Text style={styles.title}>Congress</Text>
         <TouchableOpacity style={styles.button} onPress={() => router.push('/congress/real')}>
-          <Text style={styles.buttonText}>Real Debate Congress</Text>
+          <Text style={styles.buttonText}>Real Debate</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={() => router.push('/congress/practice')}>
-          <Text style={styles.buttonText}>Practice Debate Congress</Text>
+          <Text style={styles.buttonText}>Debate Practice</Text>
         </TouchableOpacity>
       </View>
     </View>
