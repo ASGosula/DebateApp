@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../constants/firebase';
+import { auth, db } from '../constants/firebase';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Animated, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Animated, Modal, TextInput, Alert, ActivityIndicator, Keyboard, Platform, TouchableWithoutFeedback, KeyboardAvoidingView } from 'react-native';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BUTTON_COLOR = '#E20000';
 const SCREENSHOT = require('../assets/images/Screenshot 2025-06-19 at 10.18.03 AM.png');
 const { width } = Dimensions.get('window');
+const ADMIN_PASSWORD = '909450';
+const ADMIN_KEY = 'debateapp_is_admin';
 
 export default function IndexRedirect() {
   const router = useRouter();
@@ -15,31 +19,14 @@ export default function IndexRedirect() {
   const [user, setUser] = useState<any>(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
+  const [passwordPromptVisible, setPasswordPromptVisible] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
   const [newAnnouncementContent, setNewAnnouncementContent] = useState('');
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
   const slideAnim = useState(new Animated.Value(-width))[0];
-
-  // State for announcements
-  const [announcements, setAnnouncements] = useState([
-    {
-      id: 1,
-      title: "New Tournament Registration Open",
-      content: "Registration for the Spring Championship is now open. Early bird pricing available until March 15th.",
-      date: "2024-03-10"
-    },
-    {
-      id: 2,
-      title: "Updated Debate Rules Released",
-      content: "The National Speech & Debate Association has released updated rules for the 2024-2025 season.",
-      date: "2024-03-08"
-    },
-    {
-      id: 3,
-      title: "Team Meeting This Friday",
-      content: "Mandatory team meeting this Friday at 3:30 PM in the debate room. New topic discussion.",
-      date: "2024-03-07"
-    }
-  ]);
 
   const [tournaments] = useState([
     {
@@ -65,6 +52,7 @@ export default function IndexRedirect() {
     }
   ]);
 
+  // Auth check
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
@@ -74,6 +62,24 @@ export default function IndexRedirect() {
       }
     });
     return () => unsubscribe();
+  }, []);
+
+  // Admin status persistence
+  useEffect(() => {
+    AsyncStorage.getItem(ADMIN_KEY).then(val => {
+      if (val === 'true') setIsAdmin(true);
+    });
+  }, []);
+
+  // Firestore announcements sync
+  useEffect(() => {
+    setLoadingAnnouncements(true);
+    const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setAnnouncements(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      setLoadingAnnouncements(false);
+    });
+    return () => unsub();
   }, []);
 
   if (checking) return null;
@@ -102,25 +108,41 @@ export default function IndexRedirect() {
     router.push(route as any);
   };
 
-  const addAnnouncement = () => {
+  // Admin password logic
+  const handleAdminPassword = async () => {
+    if (adminPassword === ADMIN_PASSWORD) {
+      setIsAdmin(true);
+      await AsyncStorage.setItem(ADMIN_KEY, 'true');
+      setPasswordPromptVisible(false);
+      setAdminPassword('');
+      setAddAnnouncementVisible(true);
+    } else {
+      Alert.alert('Incorrect Password', 'The password you entered is incorrect.');
+    }
+  };
+
+  // Add announcement
+  const addAnnouncement = async () => {
     if (newAnnouncementTitle.trim() === '' || newAnnouncementContent.trim() === '') {
       Alert.alert('Error', 'Please fill in both title and content');
       return;
     }
-    const today = new Date().toISOString().split('T')[0];
-    const newAnnouncement = {
-      id: Date.now(),
-      title: newAnnouncementTitle.trim(),
-      content: newAnnouncementContent.trim(),
-      date: today
-    };
-    setAnnouncements([newAnnouncement, ...announcements]);
-    setNewAnnouncementTitle('');
-    setNewAnnouncementContent('');
-    setAddAnnouncementVisible(false);
+    try {
+      await addDoc(collection(db, 'announcements'), {
+        title: newAnnouncementTitle.trim(),
+        content: newAnnouncementContent.trim(),
+        createdAt: new Date().toISOString(),
+      });
+      setNewAnnouncementTitle('');
+      setNewAnnouncementContent('');
+      setAddAnnouncementVisible(false);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to add announcement.');
+    }
   };
 
-  const removeAnnouncement = (id: number) => {
+  // Remove announcement
+  const removeAnnouncement = async (id: string) => {
     Alert.alert(
       'Remove Announcement',
       'Are you sure you want to remove this announcement?',
@@ -129,7 +151,13 @@ export default function IndexRedirect() {
         { 
           text: 'Remove', 
           style: 'destructive',
-          onPress: () => setAnnouncements(announcements.filter(item => item.id !== id))
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'announcements', id));
+            } catch (e) {
+              Alert.alert('Error', 'Failed to delete announcement.');
+            }
+          }
         }
       ]
     );
@@ -190,6 +218,44 @@ export default function IndexRedirect() {
           </Animated.View>
         </TouchableOpacity>
       </Modal>
+      {/* Admin Password Modal */}
+      <Modal
+        visible={passwordPromptVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setPasswordPromptVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Admin Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter admin password"
+              value={adminPassword}
+              onChangeText={setAdminPassword}
+              secureTextEntry
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setPasswordPromptVisible(false);
+                  setAdminPassword('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.addButton]}
+                onPress={handleAdminPassword}
+              >
+                <Text style={styles.addButtonText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {/* Add Announcement Modal */}
       <Modal
         visible={addAnnouncementVisible}
@@ -197,45 +263,52 @@ export default function IndexRedirect() {
         animationType="slide"
         onRequestClose={() => setAddAnnouncementVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Add New Announcement</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Announcement Title"
-              value={newAnnouncementTitle}
-              onChangeText={setNewAnnouncementTitle}
-              maxLength={100}
-            />
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Announcement Content"
-              value={newAnnouncementContent}
-              onChangeText={setNewAnnouncementContent}
-              multiline
-              numberOfLines={4}
-              maxLength={500}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setAddAnnouncementVisible(false);
-                  setNewAnnouncementTitle('');
-                  setNewAnnouncementContent('');
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.addButton]}
-                onPress={addAnnouncement}
-              >
-                <Text style={styles.addButtonText}>Add</Text>
-              </TouchableOpacity>
-            </View>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ width: '100%', alignItems: 'center', flex: 1, justifyContent: 'center' }}
+            >
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>Add New Announcement</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Announcement Title"
+                  value={newAnnouncementTitle}
+                  onChangeText={setNewAnnouncementTitle}
+                  maxLength={100}
+                />
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Announcement Content"
+                  value={newAnnouncementContent}
+                  onChangeText={setNewAnnouncementContent}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={500}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => {
+                      setAddAnnouncementVisible(false);
+                      setNewAnnouncementTitle('');
+                      setNewAnnouncementContent('');
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.addButton]}
+                    onPress={addAnnouncement}
+                  >
+                    <Text style={styles.addButtonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
       {/* Main Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -247,16 +320,30 @@ export default function IndexRedirect() {
         </View>
         {/* News & Announcements Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={styles.sectionHeaderColumn}>
             <Text style={styles.sectionTitle}>📢 News & Announcements</Text>
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={() => setAddAnnouncementVisible(true)}
-            >
-              <Text style={styles.addButtonText}>+ Add</Text>
-            </TouchableOpacity>
+            <View style={styles.addButtonWrapperCentered}>
+              {isAdmin && (
+                <TouchableOpacity 
+                  style={styles.addButton}
+                  onPress={() => setAddAnnouncementVisible(true)}
+                >
+                  <Text style={styles.addButtonText}>+ Add</Text>
+                </TouchableOpacity>
+              )}
+              {!isAdmin && (
+                <TouchableOpacity 
+                  style={styles.addButton}
+                  onPress={() => setPasswordPromptVisible(true)}
+                >
+                  <Text style={styles.addButtonText}>+ Add</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-          {announcements.length === 0 ? (
+          {loadingAnnouncements ? (
+            <ActivityIndicator color={BUTTON_COLOR} />
+          ) : announcements.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>No announcements yet</Text>
               <Text style={styles.emptyStateSubtext}>Tap &quot;Add&quot; to create your first announcement</Text>
@@ -266,15 +353,17 @@ export default function IndexRedirect() {
               <View key={item.id} style={styles.newsCard}>
                 <View style={styles.newsHeader}>
                   <Text style={styles.newsTitle}>{item.title}</Text>
-                  <TouchableOpacity 
-                    style={styles.removeButton}
-                    onPress={() => removeAnnouncement(item.id)}
-                  >
-                    <Text style={styles.removeButtonText}>×</Text>
-                  </TouchableOpacity>
+                  {isAdmin && (
+                    <TouchableOpacity 
+                      style={styles.removeButton}
+                      onPress={() => removeAnnouncement(item.id)}
+                    >
+                      <Text style={styles.removeButtonText}>×</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <Text style={styles.newsContent}>{item.content}</Text>
-                <Text style={styles.newsDate}>{item.date}</Text>
+                <Text style={styles.newsDate}>{item.createdAt?.split('T')[0]}</Text>
               </View>
             ))
           )}
@@ -358,7 +447,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   menuContainer: {
-    width: width * 0.7, // Adjust as needed
+    width: width * 0.7,
     height: '100%',
     backgroundColor: '#fff',
     padding: 20,
@@ -403,7 +492,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 20,
-    width: '90%',
+    width: '95%',
+    maxWidth: 400,
     alignItems: 'center',
   },
   modalTitle: {
@@ -417,9 +507,11 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 8,
-    padding: 10,
+    padding: 12,
     marginBottom: 15,
     fontSize: 16,
+    backgroundColor: '#f8f9fa',
+    color: '#222',
   },
   textArea: {
     height: 100,
@@ -448,18 +540,28 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: BUTTON_COLOR,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 60,
+    elevation: 2,
+    shadowColor: BUTTON_COLOR,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   addButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,
     padding: 20,
+    paddingBottom: 40,
+    backgroundColor: '#f8f9fa',
   },
   welcomeSection: {
     alignItems: 'center',
@@ -485,6 +587,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 30,
+    paddingHorizontal: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -492,10 +595,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  addButtonWrapper: {
+    flexShrink: 0,
+    marginLeft: 8,
+  },
+  addButtonWrapperCentered: {
+    marginTop: 8,
+    alignItems: 'center',
+    width: '100%',
+  },
+  sectionHeaderColumn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 2,
   },
   newsCard: {
     backgroundColor: '#fff',
@@ -524,7 +651,7 @@ const styles = StyleSheet.create({
   },
   removeButtonText: {
     fontSize: 20,
-    color: '#e20000',
+    color: '#E20000',
   },
   newsContent: {
     fontSize: 15,

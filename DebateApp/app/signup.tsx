@@ -83,7 +83,7 @@ export default function SignupPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181A20',
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -91,19 +91,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#333',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#B0B3B8',
+    color: '#666',
     marginBottom: 32,
     textAlign: 'center',
   },
   input: {
     width: width * 0.8,
-    backgroundColor: '#23262F',
-    color: '#fff',
+    backgroundColor: '#f8f9fa',
+    color: '#222',
     borderRadius: 25,
     paddingHorizontal: 20,
     paddingVertical: 14,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   bottomText: {
-    color: '#B0B3B8',
+    color: '#666',
     fontSize: 15,
   },
   linkText: {
