@@ -1,1 +1,1 @@
-import CongressPracticeSpeaking from './app/congress/practice-speaking';
+export { default } from 'expo-router';

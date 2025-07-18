@@ -19,7 +19,11 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false }} initialRouteName="WelcomeScreen">
+        <Stack.Screen name="WelcomeScreen" />
+        <Stack.Screen name="LoginScreen" />
+        <Stack.Screen name="SignUpScreen" />
+        <Stack.Screen name="HomeScreen" />
         <Stack.Screen name="+not-found" />
         <Stack.Screen name="lincoln-douglas" />
         <Stack.Screen name="public-forum" />
