@@ -401,6 +401,12 @@ export default function IndexRedirect() {
           >
             <Text style={styles.quickButtonText}>Congress</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickButton}
+            onPress={() => router.push('/policy' as any)}
+          >
+            <Text style={styles.quickButtonText}>Policy</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>

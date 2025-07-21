@@ -2,17 +2,22 @@ import React, { useState, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 
-const PREP_TIME_SECONDS = 4 * 60; // 4 minutes
+const PREP_TIME_SECONDS = 8 * 60; // Policy prep is often 8-10 min, but you can adjust
 const { width } = Dimensions.get('window');
 
 const debateSections = [
-  { label: "1AC", duration: 6 * 60 },
-  { label: "CX1", duration: 3 * 60 },
-  { label: "1NC", duration: 7 * 60 },
-  { label: "CX2", duration: 3 * 60 },
-  { label: "1AR", duration: 4 * 60 },
-  { label: "NR", duration: 6 * 60 },
-  { label: "2AR", duration: 3 * 60 },
+  { label: "1AC (Aff #1 reads)", duration: 8 * 60 },
+  { label: "Cross X (Neg #2 asks)", duration: 3 * 60 },
+  { label: "1NC (Neg #1 reads)", duration: 8 * 60 },
+  { label: "Cross X (Aff #1 asks)", duration: 3 * 60 },
+  { label: "2AC (Aff #2 reads)", duration: 8 * 60 },
+  { label: "Cross X (Neg #1 reads)", duration: 3 * 60 },
+  { label: "2NC (Neg #2 reads)", duration: 8 * 60 },
+  { label: "Cross X (Aff #2 asks)", duration: 3 * 60 },
+  { label: "1NR (Neg #1 reads)", duration: 5 * 60 },
+  { label: "1AR (Aff #1 reads)", duration: 5 * 60 },
+  { label: "2NR (Neg #2 reads)", duration: 5 * 60 },
+  { label: "2AR (Aff #2 reads)", duration: 5 * 60 },
 ];
 
 function formatTime(seconds: number) {
@@ -21,7 +26,7 @@ function formatTime(seconds: number) {
   return `${m}:${s}`;
 }
 
-export default function LincolnDouglasReal() {
+export default function PolicyReal() {
   // Prep timer state
   const [prepTimeLeft, setPrepTimeLeft] = useState(PREP_TIME_SECONDS);
   const [isPrepRunning, setIsPrepRunning] = useState(false);
@@ -100,11 +105,8 @@ export default function LincolnDouglasReal() {
   };
 
   const handleDebateResetAll = () => {
-    // Reset prep timer
     setPrepTimeLeft(PREP_TIME_SECONDS);
     setIsPrepRunning(false);
-    
-    // Reset debate timer
     setCurrentSectionIndex(0);
     setDebateTimeLeft(debateSections[0].duration);
     setIsDebateRunning(false);
@@ -119,7 +121,7 @@ export default function LincolnDouglasReal() {
 
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText type="title" style={styles.headerTitle}>Lincoln Douglas</ThemedText>
+        <ThemedText type="title" style={styles.headerTitle}>Policy</ThemedText>
         <ThemedText type="subtitle" style={styles.headerSubtitle}>Real Debate</ThemedText>
       </View>
 

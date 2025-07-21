@@ -30,6 +30,13 @@ export default function PracticeScreen() {
       description: "Legislative debate simulation",
       icon: "📜",
       route: "/congress"
+    },
+    {
+      id: 4,
+      title: "Policy",
+      description: "Partnered, evidence-heavy debate format",
+      icon: "📚",
+      route: "/policy"
     }
   ];
 

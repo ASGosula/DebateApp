@@ -1,21 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Text, FlatList, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Alert, Text, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
 import { Link } from 'expo-router';
 
-const PREP_TIME_SECONDS = 4 * 60; // 4 minutes
+const PREP_TIME_SECONDS = 8 * 60; // Policy prep is often 8-10 min
 const { width } = Dimensions.get('window');
 
 const debateSections = [
-  { label: "1AC", duration: 6 * 60 },
-  { label: "CX1", duration: 3 * 60 },
-  { label: "1NC", duration: 7 * 60 },
-  { label: "CX2", duration: 3 * 60 },
-  { label: "1AR", duration: 4 * 60 },
-  { label: "NR", duration: 6 * 60 },
-  { label: "2AR", duration: 3 * 60 },
+  { label: "1AC (Aff #1 reads)", duration: 8 * 60 },
+  { label: "Cross X (Neg #2 asks)", duration: 3 * 60 },
+  { label: "1NC (Neg #1 reads)", duration: 8 * 60 },
+  { label: "Cross X (Aff #1 asks)", duration: 3 * 60 },
+  { label: "2AC (Aff #2 reads)", duration: 8 * 60 },
+  { label: "Cross X (Neg #1 reads)", duration: 3 * 60 },
+  { label: "2NC (Neg #2 reads)", duration: 8 * 60 },
+  { label: "Cross X (Aff #2 asks)", duration: 3 * 60 },
+  { label: "1NR (Neg #1 reads)", duration: 5 * 60 },
+  { label: "1AR (Aff #1 reads)", duration: 5 * 60 },
+  { label: "2NR (Neg #2 reads)", duration: 5 * 60 },
+  { label: "2AR (Aff #2 reads)", duration: 5 * 60 },
 ];
 
 const SELF_REVIEW_CHECKLIST = [
@@ -40,23 +45,15 @@ function formatTime(seconds: number) {
   return `${m}:${s}`;
 }
 
-// Function to calculate decibel level from audio amplitude
 function calculateDecibels(amplitude: number): number {
-  // Convert amplitude to decibels (approximate calculation)
-  // This is a simplified calculation - real decibel measurement requires calibration
-  const minAmplitude = 0.0001; // Minimum amplitude threshold
-  const maxAmplitude = 1.0; // Maximum amplitude
-  
+  const minAmplitude = 0.0001;
+  const maxAmplitude = 1.0;
   if (amplitude <= minAmplitude) return 0;
-  
-  // Convert to decibels (dB = 20 * log10(amplitude))
   const db = 20 * Math.log10(amplitude / minAmplitude);
-  
-  // Normalize to typical voice range (30-80 dB)
   return Math.max(30, Math.min(80, db + 40));
 }
 
-export default function LincolnDouglasPractice() {
+export default function PolicyPractice() {
   // Prep timer state
   const [prepTimeLeft, setPrepTimeLeft] = useState(PREP_TIME_SECONDS);
   const [isPrepRunning, setIsPrepRunning] = useState(false);
@@ -106,12 +103,10 @@ export default function LincolnDouglasPractice() {
       debateIntervalRef.current = setInterval(() => {
         setDebateTimeLeft((prev) => {
           if (prev <= 1) {
-            // Auto-advance to next section
             if (currentSectionIndex < debateSections.length - 1) {
               setCurrentSectionIndex(currentSectionIndex + 1);
               return debateSections[currentSectionIndex + 1].duration;
             } else {
-              // End of debate
               setIsDebateRunning(false);
               return 0;
             }
@@ -128,7 +123,6 @@ export default function LincolnDouglasPractice() {
     };
   }, [isDebateRunning, debateTimeLeft, currentSectionIndex]);
 
-  // Update debate time when section changes
   useEffect(() => {
     setDebateTimeLeft(debateSections[currentSectionIndex].duration);
   }, [currentSectionIndex]);
@@ -141,40 +135,25 @@ export default function LincolnDouglasPractice() {
           if (recordingRef.current) {
             const status = await recordingRef.current.getStatusAsync();
             if (status.isRecording) {
-              // Get the actual recording data
-              const uri = recordingRef.current.getURI();
-              if (uri) {
-                // For real-time analysis, we need to use a different approach
-                // Since expo-av doesn't provide real-time amplitude data directly,
-                // we'll use a more realistic simulation based on microphone input
-                
-                // Create a more realistic amplitude simulation that responds to actual sound
-                // This is a workaround since expo-av doesn't provide real-time amplitude
-                const baseAmplitude = 0.1;
-                const noiseLevel = Math.random() * 0.3; // Simulate background noise
-                const voiceAmplitude = Math.random() * 0.4; // Simulate voice input
-                
-                // Combine to create a more realistic amplitude
-                const amplitude = baseAmplitude + noiseLevel + voiceAmplitude;
-                const db = calculateDecibels(amplitude);
-                
-                setDecibelLevel(db);
-                
-                // Determine voice status
-                if (db >= 65 && db <= 75) {
-                  setVoiceStatus('Good Volume');
-                } else if (db < 65) {
-                  setVoiceStatus('Too Low');
-                } else {
-                  setVoiceStatus('Too High');
-                }
+              const baseAmplitude = 0.1;
+              const noiseLevel = Math.random() * 0.3;
+              const voiceAmplitude = Math.random() * 0.4;
+              const amplitude = baseAmplitude + noiseLevel + voiceAmplitude;
+              const db = calculateDecibels(amplitude);
+              setDecibelLevel(db);
+              if (db >= 65 && db <= 75) {
+                setVoiceStatus('Good Volume');
+              } else if (db < 65) {
+                setVoiceStatus('Too Low');
+              } else {
+                setVoiceStatus('Too High');
               }
             }
           }
         } catch (error) {
           console.error('Error reading sound level:', error);
         }
-      }, 200); // Update every 200ms for better performance
+      }, 200);
     } else {
       if (soundMeterIntervalRef.current) {
         clearInterval(soundMeterIntervalRef.current);
@@ -183,7 +162,6 @@ export default function LincolnDouglasPractice() {
       setDecibelLevel(0);
       setVoiceStatus('Not Recording');
     }
-    
     return () => {
       if (soundMeterIntervalRef.current) clearInterval(soundMeterIntervalRef.current);
     };
@@ -208,11 +186,8 @@ export default function LincolnDouglasPractice() {
   };
 
   const handleDebateResetAll = () => {
-    // Reset prep timer
     setPrepTimeLeft(PREP_TIME_SECONDS);
     setIsPrepRunning(false);
-    
-    // Reset debate timer
     setCurrentSectionIndex(0);
     setDebateTimeLeft(debateSections[0].duration);
     setIsDebateRunning(false);
@@ -299,13 +274,13 @@ export default function LincolnDouglasPractice() {
   const getVoiceStatusColor = () => {
     switch (voiceStatus) {
       case 'Good Volume':
-        return '#4CAF50'; // Green
+        return '#4CAF50';
       case 'Too Low':
-        return '#FF9800'; // Orange
+        return '#FF9800';
       case 'Too High':
-        return '#F44336'; // Red
+        return '#F44336';
       default:
-        return '#666'; // Gray
+        return '#666';
     }
   };
 
@@ -319,13 +294,13 @@ export default function LincolnDouglasPractice() {
 
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.headerTitle}>Lincoln Douglas</ThemedText>
+          <ThemedText type="title" style={styles.headerTitle}>Policy</ThemedText>
           <ThemedText type="subtitle" style={styles.headerSubtitle}>Practice Debate</ThemedText>
         </View>
 
         {/* Practice Speaking Button */}
         <View style={{ marginBottom: 16 }}>
-          <Link href="/lincoln-douglas/practice-speaking" style={{ backgroundColor: '#E20000', padding: 12, borderRadius: 8, alignItems: 'center' }}>
+          <Link href={"/policy/practice-speaking" as any} style={{ backgroundColor: '#E20000', padding: 12, borderRadius: 8, alignItems: 'center' }}>
             <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Practice Speaking</Text>
           </Link>
         </View>
@@ -414,7 +389,7 @@ export default function LincolnDouglasPractice() {
             <ThemedText type="title" style={styles.decibelText}>
               {Math.round(decibelLevel)} dB
             </ThemedText>
-            <ThemedText type="default" style={[styles.voiceStatusText, { color: getVoiceStatusColor() }]}>
+            <ThemedText type="default" style={[styles.voiceStatusText, { color: getVoiceStatusColor() }]}> 
               {voiceStatus}
             </ThemedText>
           </View>

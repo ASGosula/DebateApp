@@ -1,127 +1,149 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
 
-const SPEECH_TIME = 180; // 3 minutes in seconds
-const PREP_TIME = 180; // 3 minutes in seconds
+const SPEECH_TIME = 3 * 60; // 3 minutes
+const PREP_TIME = 3 * 60; // 3 minutes
+const { width } = Dimensions.get('window');
+
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60).toString().padStart(1, '0');
+  const s = (seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
 
 export default function CongressReal() {
-  const [speechTime, setSpeechTime] = useState(SPEECH_TIME);
-  const [prepTime, setPrepTime] = useState(PREP_TIME);
+  // Speech timer state
+  const [speechTimeLeft, setSpeechTimeLeft] = useState(SPEECH_TIME);
   const [isSpeechRunning, setIsSpeechRunning] = useState(false);
+  const speechIntervalRef = useRef<any>(null);
+
+  // Prep timer state
+  const [prepTimeLeft, setPrepTimeLeft] = useState(PREP_TIME);
   const [isPrepRunning, setIsPrepRunning] = useState(false);
-  const speechInterval = useRef<NodeJS.Timeout | null>(null);
-  const prepInterval = useRef<NodeJS.Timeout | null>(null);
+  const prepIntervalRef = useRef<any>(null);
 
-  const startSpeech = () => {
-    if (isSpeechRunning) return;
-    setIsSpeechRunning(true);
-    speechInterval.current = setInterval(() => {
-      setSpeechTime((prev) => {
-        if (prev <= 1) {
-          clearInterval(speechInterval.current!);
-          setIsSpeechRunning(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const pauseSpeech = () => {
-    setIsSpeechRunning(false);
-    if (speechInterval.current) clearInterval(speechInterval.current);
-  };
-
-  const resetSpeech = () => {
-    pauseSpeech();
-    setSpeechTime(SPEECH_TIME);
-  };
-
-  const startPrep = () => {
-    if (isPrepRunning) return;
-    setIsPrepRunning(true);
-    prepInterval.current = setInterval(() => {
-      setPrepTime((prev) => {
-        if (prev <= 1) {
-          clearInterval(prepInterval.current!);
-          setIsPrepRunning(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const pausePrep = () => {
-    setIsPrepRunning(false);
-    if (prepInterval.current) clearInterval(prepInterval.current);
-  };
-
-  const resetPrep = () => {
-    pausePrep();
-    setPrepTime(PREP_TIME);
-  };
-
+  // Speech timer logic
   React.useEffect(() => {
+    if (isSpeechRunning && speechTimeLeft > 0) {
+      speechIntervalRef.current = setInterval(() => {
+        setSpeechTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else if (!isSpeechRunning && speechIntervalRef.current) {
+      clearInterval(speechIntervalRef.current);
+      speechIntervalRef.current = null;
+    }
     return () => {
-      if (speechInterval.current) clearInterval(speechInterval.current);
-      if (prepInterval.current) clearInterval(prepInterval.current);
+      if (speechIntervalRef.current) clearInterval(speechIntervalRef.current);
     };
-  }, []);
+  }, [isSpeechRunning, speechTimeLeft]);
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60).toString().padStart(1, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
+  // Prep timer logic
+  React.useEffect(() => {
+    if (isPrepRunning && prepTimeLeft > 0) {
+      prepIntervalRef.current = setInterval(() => {
+        setPrepTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else if (!isPrepRunning && prepIntervalRef.current) {
+      clearInterval(prepIntervalRef.current);
+      prepIntervalRef.current = null;
+    }
+    return () => {
+      if (prepIntervalRef.current) clearInterval(prepIntervalRef.current);
+    };
+  }, [isPrepRunning, prepTimeLeft]);
+
+  const handleSpeechStart = () => setIsSpeechRunning(true);
+  const handleSpeechStop = () => setIsSpeechRunning(false);
+  const handleSpeechReset = () => {
+    setSpeechTimeLeft(SPEECH_TIME);
+    setIsSpeechRunning(false);
+  };
+
+  const handlePrepStart = () => setIsPrepRunning(true);
+  const handlePrepStop = () => setIsPrepRunning(false);
+  const handlePrepReset = () => {
+    setPrepTimeLeft(PREP_TIME);
+    setIsPrepRunning(false);
+  };
+
+  const handleResetAll = () => {
+    setSpeechTimeLeft(SPEECH_TIME);
+    setIsSpeechRunning(false);
+    setPrepTimeLeft(PREP_TIME);
+    setIsPrepRunning(false);
   };
 
   return (
     <View style={styles.container}>
+      {/* Swipe to go back indicator */}
       <View style={styles.swipeIndicator}>
-        <Text style={styles.swipeText}>← Swipe to go back</Text>
+        <ThemedText style={styles.swipeText}>← Swipe to go back</ThemedText>
       </View>
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Congress</Text>
-        <Text style={styles.headerSubtitle}>Real Debate</Text>
+        <ThemedText type="title" style={styles.headerTitle}>Congress</ThemedText>
+        <ThemedText type="subtitle" style={styles.headerSubtitle}>Real Debate</ThemedText>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.title}>Speech Timer</Text>
-        <Text style={styles.timer}>{formatTime(speechTime)}</Text>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.startButton} onPress={startSpeech}>
-            <Text style={styles.buttonText}>Start</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.stopButton} onPress={pauseSpeech}>
-            <Text style={styles.buttonText}>Stop</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.resetButton} onPress={resetSpeech}>
-            <Text style={styles.buttonText}>Reset</Text>
-          </TouchableOpacity>
+
+      {/* Speech Timer Card */}
+      <View style={styles.timerCard}>
+        <View style={styles.cardHeader}>
+          <ThemedText type="subtitle" style={styles.debateLabel}>Speech Timer</ThemedText>
         </View>
-        <TouchableOpacity style={styles.resetAllButton} onPress={() => {
-          pauseSpeech();
-          pausePrep();
-          setSpeechTime(SPEECH_TIME);
-          setPrepTime(PREP_TIME);
-        }}>
-          <Text style={styles.resetAllButtonText}>Reset All</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.title}>Prep Timer</Text>
-        <Text style={styles.timer}>{formatTime(prepTime)}</Text>
+        <View style={styles.timerDisplay}>
+          <ThemedText type="title" style={styles.debateTimerText}>{formatTime(speechTimeLeft)}</ThemedText>
+        </View>
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.startButton} onPress={startPrep}>
-            <Text style={styles.buttonText}>Start</Text>
+          <TouchableOpacity 
+            style={[styles.controlButton, isSpeechRunning && styles.activeButton]} 
+            onPress={handleSpeechStart}
+          >
+            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.stopButton} onPress={pausePrep}>
-            <Text style={styles.buttonText}>Stop</Text>
+          <TouchableOpacity 
+            style={[styles.controlButton, !isSpeechRunning && styles.activeButton]} 
+            onPress={handleSpeechStop}
+          >
+            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.resetButton} onPress={resetPrep}>
-            <Text style={styles.buttonText}>Reset</Text>
+          <TouchableOpacity style={styles.resetButton} onPress={handleSpeechReset}>
+            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Prep Timer Card */}
+      <View style={styles.timerCard}>
+        <View style={styles.cardHeader}>
+          <ThemedText type="subtitle" style={styles.prepLabel}>Prep Timer</ThemedText>
+        </View>
+        <View style={styles.timerDisplay}>
+          <ThemedText type="title" style={styles.timerTextRed}>{formatTime(prepTimeLeft)}</ThemedText>
+        </View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity 
+            style={[styles.controlButton, isPrepRunning && styles.activeButton]} 
+            onPress={handlePrepStart}
+          >
+            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.controlButton, !isPrepRunning && styles.activeButton]} 
+            onPress={handlePrepStop}
+          >
+            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.resetButton} onPress={handlePrepReset}>
+            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.resetAllButton} onPress={handleResetAll}>
+        <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -130,9 +152,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 40,
   },
   swipeIndicator: {
     alignItems: 'center',
@@ -146,95 +167,119 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#1a1a1a',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     fontWeight: '500',
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+  timerCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cardHeader: {
     alignItems: 'center',
-    width: 320,
-    maxWidth: '100%',
+    marginBottom: 12,
   },
-  title: {
-    fontSize: 22,
+  prepLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  debateLabel: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 8,
+    color: '#000000',
+    marginBottom: 2,
   },
-  timer: {
+  sectionInfo: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  timerDisplay: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+  },
+  timerTextRed: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#E20000',
+    textAlign: 'center',
+  },
+  debateTimerText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#E20000',
-    marginBottom: 8,
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginBottom: 12,
   },
-  startButton: {
+  controlButton: {
     backgroundColor: '#E20000',
     paddingVertical: 10,
-    paddingHorizontal: 0,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     flex: 1,
     marginHorizontal: 3,
     alignItems: 'center',
-    justifyContent: 'center',
-    height: 44,
+    shadowColor: '#E20000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  stopButton: {
+  activeButton: {
     backgroundColor: '#b30000',
-    paddingVertical: 10,
-    paddingHorizontal: 0,
-    borderRadius: 8,
-    flex: 1,
-    marginHorizontal: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 44,
+    transform: [{ scale: 0.98 }],
+  },
+  controlButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   resetButton: {
-    backgroundColor: '#000',
+    backgroundColor: '#000000',
     paddingVertical: 10,
-    paddingHorizontal: 0,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     flex: 1,
     marginHorizontal: 3,
     alignItems: 'center',
-    justifyContent: 'center',
-    height: 44,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  button: {
-    backgroundColor: '#E20000',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginHorizontal: 8,
-  },
-  buttonText: {
+  resetButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   resetAllButton: {
     backgroundColor: '#E20000',
@@ -247,13 +292,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  resetAllButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.5,
   },
 }); 

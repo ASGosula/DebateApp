@@ -359,6 +359,17 @@ export default function PublicForumPractice() {
             <TouchableOpacity style={styles.resetButton} onPress={handleDebateReset}>
               <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.controlButton, currentSectionIndex === debateSections.length - 1 && { opacity: 0.5 }]} 
+              onPress={() => {
+                if (currentSectionIndex < debateSections.length - 1) {
+                  setCurrentSectionIndex(currentSectionIndex + 1);
+                }
+              }}
+              disabled={currentSectionIndex === debateSections.length - 1}
+            >
+              <ThemedText style={styles.controlButtonText}>Skip</ThemedText>
+            </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.resetAllButton} onPress={handleDebateResetAll}>
             <ThemedText style={styles.resetButtonText}>Reset All</ThemedText>
