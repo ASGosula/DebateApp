@@ -4,6 +4,7 @@ import { ThemedText } from '@/components/ThemedText';
 
 const SPEECH_TIME = 3 * 60; // 3 minutes
 const PREP_TIME = 3 * 60; // 3 minutes
+const QUESTION_TIME = 30; // 30 seconds
 const { width } = Dimensions.get('window');
 
 function formatTime(seconds: number) {
@@ -22,6 +23,11 @@ export default function CongressReal() {
   const [prepTimeLeft, setPrepTimeLeft] = useState(PREP_TIME);
   const [isPrepRunning, setIsPrepRunning] = useState(false);
   const prepIntervalRef = useRef<any>(null);
+
+  // Questioning timer state
+  const [questionTimeLeft, setQuestionTimeLeft] = useState(QUESTION_TIME);
+  const [isQuestionRunning, setIsQuestionRunning] = useState(false);
+  const questionIntervalRef = useRef<any>(null);
 
   // Speech timer logic
   React.useEffect(() => {
@@ -53,6 +59,21 @@ export default function CongressReal() {
     };
   }, [isPrepRunning, prepTimeLeft]);
 
+  // Questioning timer logic
+  React.useEffect(() => {
+    if (isQuestionRunning && questionTimeLeft > 0) {
+      questionIntervalRef.current = setInterval(() => {
+        setQuestionTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else if (!isQuestionRunning && questionIntervalRef.current) {
+      clearInterval(questionIntervalRef.current);
+      questionIntervalRef.current = null;
+    }
+    return () => {
+      if (questionIntervalRef.current) clearInterval(questionIntervalRef.current);
+    };
+  }, [isQuestionRunning, questionTimeLeft]);
+
   const handleSpeechStart = () => setIsSpeechRunning(true);
   const handleSpeechStop = () => setIsSpeechRunning(false);
   const handleSpeechReset = () => {
@@ -67,11 +88,20 @@ export default function CongressReal() {
     setIsPrepRunning(false);
   };
 
+  const handleQuestionStart = () => setIsQuestionRunning(true);
+  const handleQuestionStop = () => setIsQuestionRunning(false);
+  const handleQuestionReset = () => {
+    setQuestionTimeLeft(QUESTION_TIME);
+    setIsQuestionRunning(false);
+  };
+
   const handleResetAll = () => {
     setSpeechTimeLeft(SPEECH_TIME);
     setIsSpeechRunning(false);
     setPrepTimeLeft(PREP_TIME);
     setIsPrepRunning(false);
+    setQuestionTimeLeft(QUESTION_TIME);
+    setIsQuestionRunning(false);
   };
 
   return (
@@ -136,6 +166,33 @@ export default function CongressReal() {
             <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.resetButton} onPress={handlePrepReset}>
+            <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Questioning Timer Card */}
+      <View style={styles.timerCard}>
+        <View style={styles.cardHeader}>
+          <ThemedText type="subtitle" style={styles.debateLabel}>Questioning Timer</ThemedText>
+        </View>
+        <View style={styles.timerDisplay}>
+          <ThemedText type="title" style={styles.timerTextRed}>{formatTime(questionTimeLeft)}</ThemedText>
+        </View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity 
+            style={[styles.controlButton, isQuestionRunning && styles.activeButton]} 
+            onPress={handleQuestionStart}
+          >
+            <ThemedText style={styles.controlButtonText}>Start</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.controlButton, !isQuestionRunning && styles.activeButton]} 
+            onPress={handleQuestionStop}
+          >
+            <ThemedText style={styles.controlButtonText}>Stop</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.resetButton} onPress={handleQuestionReset}>
             <ThemedText style={styles.resetButtonText}>Reset</ThemedText>
           </TouchableOpacity>
         </View>

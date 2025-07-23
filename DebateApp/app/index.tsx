@@ -27,30 +27,10 @@ export default function IndexRedirect() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
   const slideAnim = useState(new Animated.Value(-width))[0];
-
-  const [tournaments] = useState([
-    {
-      id: 1,
-      name: "Spring Championship",
-      date: "April 15-16, 2024",
-      location: "University of California, Berkeley",
-      registrationDeadline: "March 15, 2024"
-    },
-    {
-      id: 2,
-      name: "State Qualifiers",
-      date: "May 3-4, 2024",
-      location: "Stanford University",
-      registrationDeadline: "April 20, 2024"
-    },
-    {
-      id: 3,
-      name: "National Tournament",
-      date: "June 10-15, 2024",
-      location: "Phoenix, Arizona",
-      registrationDeadline: "May 1, 2024"
-    }
-  ]);
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [addTournamentVisible, setAddTournamentVisible] = useState(false);
+  const [newTournament, setNewTournament] = useState({ name: '', date: '', location: '', registrationDeadline: '' });
+  const [loadingTournaments, setLoadingTournaments] = useState(true);
 
   // Auth check
   useEffect(() => {
@@ -78,6 +58,17 @@ export default function IndexRedirect() {
     const unsub = onSnapshot(q, (snapshot) => {
       setAnnouncements(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
       setLoadingAnnouncements(false);
+    });
+    return () => unsub();
+  }, []);
+
+  // Firestore tournaments sync
+  useEffect(() => {
+    setLoadingTournaments(true);
+    const q = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setTournaments(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      setLoadingTournaments(false);
     });
     return () => unsub();
   }, []);
@@ -161,6 +152,23 @@ export default function IndexRedirect() {
         }
       ]
     );
+  };
+
+  const addTournament = async () => {
+    if (!newTournament.name || !newTournament.date || !newTournament.location || !newTournament.registrationDeadline) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    try {
+      await addDoc(collection(db, 'tournaments'), {
+        ...newTournament,
+        createdAt: new Date().toISOString(),
+      });
+      setNewTournament({ name: '', date: '', location: '', registrationDeadline: '' });
+      setAddTournamentVisible(false);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to add tournament.');
+    }
   };
 
   return (
@@ -310,6 +318,71 @@ export default function IndexRedirect() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+      {/* Add Tournament Modal */}
+      <Modal
+        visible={addTournamentVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setAddTournamentVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ width: '100%', alignItems: 'center', flex: 1, justifyContent: 'center' }}
+            >
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>Add New Tournament</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Tournament Name"
+                  value={newTournament.name}
+                  onChangeText={text => setNewTournament({ ...newTournament, name: text })}
+                  maxLength={100}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Date(s) (e.g. April 15-16, 2024)"
+                  value={newTournament.date}
+                  onChangeText={text => setNewTournament({ ...newTournament, date: text })}
+                  maxLength={100}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Location"
+                  value={newTournament.location}
+                  onChangeText={text => setNewTournament({ ...newTournament, location: text })}
+                  maxLength={100}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Registration Deadline"
+                  value={newTournament.registrationDeadline}
+                  onChangeText={text => setNewTournament({ ...newTournament, registrationDeadline: text })}
+                  maxLength={100}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => {
+                      setAddTournamentVisible(false);
+                      setNewTournament({ name: '', date: '', location: '', registrationDeadline: '' });
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.addButton]}
+                    onPress={addTournament}
+                  >
+                    <Text style={styles.addButtonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
       {/* Main Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Welcome Section */}
@@ -370,15 +443,35 @@ export default function IndexRedirect() {
         </View>
         {/* Upcoming Tournaments Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏆 Upcoming Tournaments</Text>
-          {tournaments.map((tournament) => (
-            <View key={tournament.id} style={styles.tournamentCard}>
-              <Text style={styles.tournamentName}>{tournament.name}</Text>
-              <Text style={styles.tournamentDate}>📅 {tournament.date}</Text>
-              <Text style={styles.tournamentLocation}>📍 {tournament.location}</Text>
-              <Text style={styles.tournamentDeadline}>⏰ Registration Deadline: {tournament.registrationDeadline}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={styles.sectionTitle}>🏆 Upcoming Tournaments</Text>
+            {isAdmin ? (
+              <TouchableOpacity style={styles.addButton} onPress={() => setAddTournamentVisible(true)}>
+                <Text style={styles.addButtonText}>+ Add</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.addButton} onPress={() => setPasswordPromptVisible(true)}>
+                <Text style={styles.addButtonText}>+ Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {loadingTournaments ? (
+            <ActivityIndicator color={BUTTON_COLOR} />
+          ) : tournaments.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No tournaments yet</Text>
+              <Text style={styles.emptyStateSubtext}>Tap "Add" to create your first tournament</Text>
             </View>
-          ))}
+          ) : (
+            tournaments.map((tournament) => (
+              <View key={tournament.id} style={styles.tournamentCard}>
+                <Text style={styles.tournamentName}>{tournament.name}</Text>
+                <Text style={styles.tournamentDate}>📅 {tournament.date}</Text>
+                <Text style={styles.tournamentLocation}>📍 {tournament.location}</Text>
+                <Text style={styles.tournamentDeadline}>⏰ Registration Deadline: {tournament.registrationDeadline}</Text>
+              </View>
+            ))
+          )}
         </View>
         {/* Quick Access Buttons */}
         <View style={styles.section}>
