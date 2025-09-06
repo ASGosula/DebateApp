@@ -1,17 +1,13 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../constants/firebase';
-import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Animated, Modal, TextInput, Alert, ActivityIndicator, Keyboard, Platform, TouchableWithoutFeedback, KeyboardAvoidingView } from 'react-native';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc } from 'firebase/firestore';
 
 const BUTTON_COLOR = '#E20000';
 const SCREENSHOT = require('../assets/images/Screenshot 2025-06-19 at 10.18.03 AM.png');
 const { width } = Dimensions.get('window');
-const ADMIN_PASSWORD = '909450';
-const ADMIN_KEY = 'debateapp_is_admin';
 
 export default function IndexRedirect() {
   const router = useRouter();
@@ -19,9 +15,8 @@ export default function IndexRedirect() {
   const [user, setUser] = useState<any>(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
-  const [passwordPromptVisible, setPasswordPromptVisible] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userStatus, setUserStatus] = useState<'pending' | 'approved' | 'rejected' | 'waitlist' | null>(null);
   const [newAnnouncementTitle, setNewAnnouncementTitle] = useState('');
   const [newAnnouncementContent, setNewAnnouncementContent] = useState('');
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -34,22 +29,33 @@ export default function IndexRedirect() {
 
   // Auth check
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-      setChecking(false);
       if (!firebaseUser) {
+        setChecking(false);
         router.replace('/welcome' as any);
+        return;
+      }
+      // Load user role/status from Firestore
+      try {
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const snap = await getDoc(userRef);
+        const data = snap.data() as any;
+        const email = (firebaseUser.email || '').toLowerCase();
+        const seedAdmin = email === 'asgosula@gmail.com';
+        const admin = data?.isAdmin === true || seedAdmin === true;
+        const status = (data?.status as any) || (seedAdmin ? 'approved' : 'pending');
+        setIsAdmin(!!admin);
+        setUserStatus(status);
+      } catch {
+        setIsAdmin(false);
+        setUserStatus('pending');
+      } finally {
+        setChecking(false);
       }
     });
     return () => unsubscribe();
-  }, []);
-
-  // Admin status persistence
-  useEffect(() => {
-    AsyncStorage.getItem(ADMIN_KEY).then(val => {
-      if (val === 'true') setIsAdmin(true);
-    });
-  }, []);
+  }, [router]);
 
   // Firestore announcements sync
   useEffect(() => {
@@ -76,6 +82,32 @@ export default function IndexRedirect() {
   if (checking) return null;
   if (!user) return null;
 
+  // Gate by status
+  if (userStatus === 'pending') {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text style={{ fontSize: 22, fontWeight: '600', marginBottom: 10 }}>Account Pending Approval</Text>
+        <Text style={{ color: '#555', textAlign: 'center' }}>An admin needs to approve your account. Please check back later.</Text>
+      </View>
+    );
+  }
+  if (userStatus === 'waitlist') {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text style={{ fontSize: 22, fontWeight: '600', marginBottom: 10 }}>Waitlisted</Text>
+        <Text style={{ color: '#555', textAlign: 'center' }}>Your account is on the waitlist. An admin may admit you soon.</Text>
+      </View>
+    );
+  }
+  if (userStatus === 'rejected') {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text style={{ fontSize: 22, fontWeight: '600', marginBottom: 10, color: '#E20000' }}>Access Denied</Text>
+        <Text style={{ color: '#555', textAlign: 'center' }}>Your account request was rejected. Contact an admin if this is an error.</Text>
+      </View>
+    );
+  }
+
   // Menu logic
   const toggleMenu = () => {
     if (menuVisible) {
@@ -99,21 +131,12 @@ export default function IndexRedirect() {
     router.push(route as any);
   };
 
-  // Admin password logic
-  const handleAdminPassword = async () => {
-    if (adminPassword === ADMIN_PASSWORD) {
-      setIsAdmin(true);
-      await AsyncStorage.setItem(ADMIN_KEY, 'true');
-      setPasswordPromptVisible(false);
-      setAdminPassword('');
-      setAddAnnouncementVisible(true);
-    } else {
-      Alert.alert('Incorrect Password', 'The password you entered is incorrect.');
-    }
-  };
-
   // Add announcement
   const addAnnouncement = async () => {
+    if (!isAdmin) {
+      Alert.alert('Not authorized', 'Only admins can add announcements.');
+      return;
+    }
     if (newAnnouncementTitle.trim() === '' || newAnnouncementContent.trim() === '') {
       Alert.alert('Error', 'Please fill in both title and content');
       return;
@@ -127,13 +150,14 @@ export default function IndexRedirect() {
       setNewAnnouncementTitle('');
       setNewAnnouncementContent('');
       setAddAnnouncementVisible(false);
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Failed to add announcement.');
     }
   };
 
   // Remove announcement
   const removeAnnouncement = async (id: string) => {
+    if (!isAdmin) return;
     Alert.alert(
       'Remove Announcement',
       'Are you sure you want to remove this announcement?',
@@ -145,7 +169,7 @@ export default function IndexRedirect() {
           onPress: async () => {
             try {
               await deleteDoc(doc(db, 'announcements', id));
-            } catch (e) {
+            } catch {
               Alert.alert('Error', 'Failed to delete announcement.');
             }
           }
@@ -155,6 +179,10 @@ export default function IndexRedirect() {
   };
 
   const addTournament = async () => {
+    if (!isAdmin) {
+      Alert.alert('Not authorized', 'Only admins can add tournaments.');
+      return;
+    }
     if (!newTournament.name || !newTournament.date || !newTournament.location || !newTournament.registrationDeadline) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -166,7 +194,7 @@ export default function IndexRedirect() {
       });
       setNewTournament({ name: '', date: '', location: '', registrationDeadline: '' });
       setAddTournamentVisible(false);
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Failed to add tournament.');
     }
   };
@@ -223,46 +251,16 @@ export default function IndexRedirect() {
             >
               <Text style={styles.menuItemText}>📚 Resources</Text>
             </TouchableOpacity>
+            {isAdmin && (
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={() => navigateTo('/admin')}
+              >
+                <Text style={styles.menuItemText}>🛡️ Admin</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
         </TouchableOpacity>
-      </Modal>
-      {/* Admin Password Modal */}
-      <Modal
-        visible={passwordPromptVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setPasswordPromptVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Admin Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter admin password"
-              value={adminPassword}
-              onChangeText={setAdminPassword}
-              secureTextEntry
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setPasswordPromptVisible(false);
-                  setAdminPassword('');
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.addButton]}
-                onPress={handleAdminPassword}
-              >
-                <Text style={styles.addButtonText}>Submit</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
       </Modal>
       {/* Add Announcement Modal */}
       <Modal
@@ -404,14 +402,6 @@ export default function IndexRedirect() {
                   <Text style={styles.addButtonText}>+ Add</Text>
                 </TouchableOpacity>
               )}
-              {!isAdmin && (
-                <TouchableOpacity 
-                  style={styles.addButton}
-                  onPress={() => setPasswordPromptVisible(true)}
-                >
-                  <Text style={styles.addButtonText}>+ Add</Text>
-                </TouchableOpacity>
-              )}
             </View>
           </View>
           {loadingAnnouncements ? (
@@ -449,18 +439,14 @@ export default function IndexRedirect() {
               <TouchableOpacity style={styles.addButton} onPress={() => setAddTournamentVisible(true)}>
                 <Text style={styles.addButtonText}>+ Add</Text>
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.addButton} onPress={() => setPasswordPromptVisible(true)}>
-                <Text style={styles.addButtonText}>+ Add</Text>
-              </TouchableOpacity>
-            )}
+            ) : null}
           </View>
           {loadingTournaments ? (
             <ActivityIndicator color={BUTTON_COLOR} />
           ) : tournaments.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>No tournaments yet</Text>
-              <Text style={styles.emptyStateSubtext}>Tap "Add" to create your first tournament</Text>
+              <Text style={styles.emptyStateSubtext}>Tap &quot;Add&quot; to create your first tournament</Text>
             </View>
           ) : (
             tournaments.map((tournament) => (

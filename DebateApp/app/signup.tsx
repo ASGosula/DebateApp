@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../constants/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db } from '../constants/firebase';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
 export default function SignupPage() {
   const router = useRouter();
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,14 +18,39 @@ export default function SignupPage() {
 
   const handleSignup = async () => {
     setError('');
+    if (!displayName.trim()) {
+      setError('Please enter a display name');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.replace('/'); // Go to home page after signup
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { displayName: displayName.trim() });
+      }
+      const uid = cred.user.uid;
+      const isSeedAdmin = email.trim().toLowerCase() === 'asgosula@gmail.com';
+      const userRef = doc(db, 'users', uid);
+      const existing = await getDoc(userRef);
+      const userDoc = {
+        uid,
+        email: email.trim().toLowerCase(),
+        displayName: displayName.trim(),
+        status: isSeedAdmin ? 'approved' : 'pending', // pending | approved | rejected | waitlist
+        isAdmin: isSeedAdmin,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      } as any;
+      if (existing.exists()) {
+        await setDoc(userRef, { ...existing.data(), ...userDoc, updatedAt: serverTimestamp() }, { merge: true });
+      } else {
+        await setDoc(userRef, userDoc);
+      }
+      router.replace('/');
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {
@@ -35,6 +62,13 @@ export default function SignupPage() {
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up</Text>
       <Text style={styles.subtitle}>Create your account to get started.</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Display name"
+        placeholderTextColor="#B0B3B8"
+        value={displayName}
+        onChangeText={setDisplayName}
+      />
       <TextInput
         style={styles.input}
         placeholder="Email"
