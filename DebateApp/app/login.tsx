@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../constants/firebase';
+import { auth, db } from '../constants/firebase';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
@@ -18,7 +19,25 @@ export default function LoginPage() {
     setError('');
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/'); // Go to home page after login
+      const u = auth.currentUser;
+      if (u) {
+        const normEmail = (u.email || '').trim().toLowerCase();
+        const isSeedAdmin = normEmail === 'asgosula@gmail.com';
+        const userRef = doc(db, 'users', u.uid);
+        const existing = await getDoc(userRef);
+        const base = existing.exists() ? existing.data() : {};
+        const next = {
+          uid: u.uid,
+          email: normEmail,
+          displayName: u.displayName || base?.displayName || '',
+          status: isSeedAdmin ? 'approved' : (base?.status || 'pending'),
+          isAdmin: isSeedAdmin ? true : (base?.isAdmin || false),
+          createdAt: base?.createdAt || serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        } as any;
+        await setDoc(userRef, next, { merge: true });
+      }
+      router.replace('/');
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {
@@ -29,7 +48,7 @@ export default function LoginPage() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Log In</Text>
-      <Text style={styles.subtitle}>Welcome back! Please log in to continue.</Text>
+      <Text style={styles.subtitle}>Welcome back.</Text>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -55,12 +74,6 @@ export default function LoginPage() {
       <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Log In</Text>}
       </TouchableOpacity>
-      <View style={styles.bottomTextContainer}>
-        <Text style={styles.bottomText}>Don&apos;t have an account?</Text>
-        <TouchableOpacity onPress={() => router.push('/signup' as any)}>
-          <Text style={styles.linkText}>Sign Up</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -120,20 +133,5 @@ const styles = StyleSheet.create({
     color: '#E20000',
     marginBottom: 12,
     textAlign: 'center',
-  },
-  bottomTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  bottomText: {
-    color: '#666',
-    fontSize: 15,
-  },
-  linkText: {
-    color: '#E20000',
-    fontWeight: 'bold',
-    marginLeft: 6,
-    fontSize: 15,
   },
 }); 
