@@ -1,0 +1,124 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { auth, db } from '../constants/firebase';
+import { collection, onSnapshot, query, updateDoc, doc, where } from 'firebase/firestore';
+
+export default function AssignedPractices() {
+  const [items, setItems] = useState<any[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const u = auth.currentUser;
+    if (!u) return;
+    const q = query(collection(db, 'userAssignments'), where('uid', '==', u.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setItems(list);
+    });
+    return () => unsub();
+  }, []);
+
+  const assigned = useMemo(() => items.filter(i => i.status !== 'feedback' && i.status !== 'submitted'), [items]);
+  const completed = useMemo(() => items.filter(i => i.status === 'submitted' || i.status === 'feedback'), [items]);
+
+  const open = (id: string) => { setOpenId(id); setNote(''); };
+  const close = () => { setOpenId(null); setNote(''); };
+
+  const submit = async () => {
+    if (!openId) return;
+    try {
+      setSaving(true);
+      await updateDoc(doc(db, 'userAssignments', openId), {
+        submissionNote: note.trim(),
+        status: 'submitted',
+        submittedAt: new Date(),
+      });
+      close();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to submit.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+      <Text style={styles.title}>Assigned Practices</Text>
+
+      <Text style={styles.section}>Assigned</Text>
+      {assigned.length === 0 && <Text style={styles.empty}>No current assignments.</Text>}
+      {assigned.map(i => (
+        <TouchableOpacity key={i.id} style={styles.card} onPress={() => open(i.id)}>
+          <View style={styles.dot(i.status)} />
+          <Text style={styles.cardTitle}>{i.assignmentId}</Text>
+        </TouchableOpacity>
+      ))}
+
+      <Text style={styles.section}>Completed</Text>
+      {completed.length === 0 && <Text style={styles.empty}>Nothing completed yet.</Text>}
+      {completed.map(i => (
+        <View key={i.id} style={[styles.card, i.status === 'feedback' && styles.cardGreen]}>
+          <View style={styles.rowBetween}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={styles.dot(i.status)} />
+              <Text style={styles.cardTitle}>{i.assignmentId}</Text>
+            </View>
+            <Text style={styles.status}>{i.status}</Text>
+          </View>
+          {i.feedback ? (
+            <View style={styles.feedbackBox}>
+              <Text style={styles.feedbackTitle}>Feedback</Text>
+              <Text style={styles.feedbackText}>{i.feedback}</Text>
+            </View>
+          ) : null}
+        </View>
+      ))}
+
+      <Modal visible={!!openId} transparent animationType="slide" onRequestClose={close}>
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Submit Practice</Text>
+            <TextInput
+              style={styles.input}
+              multiline
+              placeholder="Add a short note about your submission (optional)"
+              value={note}
+              onChangeText={setNote}
+            />
+            <View style={styles.rowBetween}>
+              <TouchableOpacity style={[styles.btn, styles.cancel]} onPress={close}>
+                <Text style={styles.btnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btn, styles.save]} onPress={submit} disabled={saving}>
+                <Text style={styles.btnText}>{saving ? 'Submitting...' : 'Submit'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  title: { fontSize: 22, fontWeight: '700', marginBottom: 12, paddingHorizontal: 0, paddingTop: 0 },
+  section: { fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 6 },
+  empty: { color: '#666' },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#eee' },
+  cardGreen: { borderColor: '#4CAF50' },
+  cardTitle: { fontWeight: '700', marginLeft: 8 },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  status: { color: '#555' },
+  dot: (status: string) => ({ width: 10, height: 10, borderRadius: 5, backgroundColor: status === 'feedback' ? '#4CAF50' : status === 'submitted' ? '#FF9800' : '#9E9E9E' }),
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  modal: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '95%', maxWidth: 520 },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, minHeight: 90, textAlignVertical: 'top' },
+  btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
+  cancel: { backgroundColor: '#9e9e9e' },
+  save: { backgroundColor: '#E20000' },
+  btnText: { color: '#fff', fontWeight: '700' },
+});

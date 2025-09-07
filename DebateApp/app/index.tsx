@@ -257,13 +257,33 @@ export default function IndexRedirect() {
             >
               <Text style={styles.menuItemText}>📈 Scores</Text>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => navigateTo('/assigned-practices')}
+            >
+              <Text style={styles.menuItemText}>📝 Assigned Practices</Text>
+            </TouchableOpacity>
             {isAdmin && (
-              <TouchableOpacity 
-                style={styles.menuItem} 
-                onPress={() => navigateTo('/admin')}
-              >
-                <Text style={styles.menuItemText}>🛡️ Admin</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => navigateTo('/admin-assignments')}
+                >
+                  <Text style={styles.menuItemText}>📤 Assign Assignments</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => navigateTo('/admin-assignments-view')}
+                >
+                  <Text style={styles.menuItemText}>📬 View Assignments</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.menuItem} 
+                  onPress={() => navigateTo('/admin')}
+                >
+                  <Text style={styles.menuItemText}>🛡️ Admin</Text>
+                </TouchableOpacity>
+              </>
             )}
           </Animated.View>
         </TouchableOpacity>
