@@ -5,6 +5,7 @@ import { collection, onSnapshot, query, updateDoc, doc, where, serverTimestamp }
 import { Audio } from 'expo-av';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as MailComposer from 'expo-mail-composer';
+import * as Sharing from 'expo-sharing';
 
 export default function AssignedPractices() {
   const [items, setItems] = useState<any[]>([]);
@@ -154,6 +155,23 @@ export default function AssignedPractices() {
     }
   };
 
+  const shareSystem = async () => {
+    try {
+      if (!recordingUri) {
+        Alert.alert('No recording', 'Record audio first.');
+        return;
+      }
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert('Sharing unavailable', 'System share is not available.');
+        return;
+      }
+      await Sharing.shareAsync(recordingUri);
+    } catch (e) {
+      Alert.alert('Share Error', 'Unable to open share sheet.');
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>Assigned Practices</Text>
@@ -233,6 +251,9 @@ export default function AssignedPractices() {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={shareViaEmail}>
                 <Text style={styles.btnText}>Share via Email</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={shareSystem}>
+                <Text style={styles.btnText}>Share</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.btn, styles.save]} onPress={submit} disabled={saving}>
                 <Text style={styles.btnText}>{saving ? 'Submitting...' : 'Submit'}</Text>
