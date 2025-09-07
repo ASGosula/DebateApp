@@ -6,6 +6,10 @@ import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useRouter } from 'expo-router';
+import ScoreRubricModal, { RubricItem } from '../../components/ScoreRubricModal';
+import { auth, db, storage } from '../../constants/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 type RootStackParamList = {
   'Practice Speaking Congress': undefined;
@@ -28,6 +32,14 @@ const ENCOURAGEMENTS = [
   'Confidence comes with practice!',
   'Try to make eye contact with your audience.',
   'Strong arguments are clear and concise.'
+];
+
+const RUBRIC: RubricItem[] = [
+  { key: 'clarity', label: 'Clarity', max: 20 },
+  { key: 'organization', label: 'Organization', max: 20 },
+  { key: 'evidence', label: 'Evidence/Support', max: 20 },
+  { key: 'delivery', label: 'Delivery/Presence', max: 20 },
+  { key: 'time', label: 'Time Management', max: 20 },
 ];
 
 function formatTime(seconds: number) {
@@ -57,6 +69,8 @@ export default function CongressPractice() {
   const [rating, setRating] = useState(3);
   const [showReview, setShowReview] = useState(false);
   const [encouragement, setEncouragement] = useState('');
+  const [rubricVisible, setRubricVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Prep timer logic
   useEffect(() => {
@@ -116,6 +130,7 @@ export default function CongressPractice() {
       setRecordedUri(uri);
       setShowReview(true);
       setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
+      setRubricVisible(true);
     } catch (err) {
       Alert.alert('Error', 'Could not stop recording.');
     }
@@ -165,6 +180,41 @@ export default function CongressPractice() {
     setShowReview(false);
     setRecordedUri(null);
     setEncouragement('');
+  };
+
+  const submitScores = async ({ breakdown, total }: { breakdown: Record<string, number>; total: number }) => {
+    try {
+      if (!auth.currentUser) {
+        Alert.alert('Not signed in', 'Please sign in to save scores.');
+        return;
+      }
+      if (!recordedUri) {
+        Alert.alert('No recording', 'Please record first.');
+        return;
+      }
+      setSaving(true);
+      const uid = auth.currentUser.uid;
+      const ts = Date.now();
+      const storageRef = ref(storage, `recordings/${uid}/congress/${ts}.m4a`);
+      const resp = await fetch(recordedUri);
+      const blob = await resp.blob();
+      await uploadBytes(storageRef, blob, { contentType: 'audio/m4a' });
+      const url = await getDownloadURL(storageRef);
+      await addDoc(collection(db, 'userScores'), {
+        uid,
+        event: 'Congress',
+        total: Math.min(100, total),
+        breakdown,
+        recordingUrl: url,
+        createdAt: serverTimestamp(),
+      });
+      Alert.alert('Saved', 'Your score and recording were saved to Scores.');
+      setRubricVisible(false);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save score.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // UI
@@ -273,6 +323,9 @@ export default function CongressPractice() {
               <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={resetReview}>
                 <Text style={styles.buttonText}>Reset</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.button]} onPress={() => setRubricVisible(true)}>
+                <Text style={styles.buttonText}>{saving ? 'Saving...' : 'Self Review & Save'}</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -311,6 +364,13 @@ export default function CongressPractice() {
             <Text style={styles.encouragement}>{encouragement}</Text>
           </View>
         )}
+        <ScoreRubricModal
+          visible={rubricVisible}
+          onClose={() => setRubricVisible(false)}
+          onSubmit={submitScores}
+          rubric={RUBRIC}
+          title="Self Review (100 pts)"
+        />
       </View>
     </ScrollView>
   );

@@ -4,6 +4,10 @@ import { ThemedText } from '@/components/ThemedText';
 import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
 import { Link } from 'expo-router';
+import ScoreRubricModal, { RubricItem } from '../../components/ScoreRubricModal';
+import { auth, db, storage } from '../../constants/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const PREP_TIME_SECONDS = 4 * 60; // 4 minutes
 const { width } = Dimensions.get('window');
@@ -18,12 +22,12 @@ const debateSections = [
   { label: "2AR", duration: 3 * 60 },
 ];
 
-const SELF_REVIEW_CHECKLIST = [
-  'Did you speak clearly?',
-  'Did you stay on topic?',
-  'Did you use evidence?',
-  'Did you finish in time?',
-  'Did you avoid filler words?'
+const RUBRIC: RubricItem[] = [
+  { key: 'clarity', label: 'Clarity', max: 20 },
+  { key: 'organization', label: 'Organization', max: 20 },
+  { key: 'evidence', label: 'Evidence/Support', max: 20 },
+  { key: 'delivery', label: 'Delivery/Presence', max: 20 },
+  { key: 'time', label: 'Time Management', max: 20 },
 ];
 
 const ENCOURAGEMENTS = [
@@ -42,17 +46,10 @@ function formatTime(seconds: number) {
 
 // Function to calculate decibel level from audio amplitude
 function calculateDecibels(amplitude: number): number {
-  // Convert amplitude to decibels (approximate calculation)
-  // This is a simplified calculation - real decibel measurement requires calibration
   const minAmplitude = 0.0001; // Minimum amplitude threshold
   const maxAmplitude = 1.0; // Maximum amplitude
-  
   if (amplitude <= minAmplitude) return 0;
-  
-  // Convert to decibels (dB = 20 * log10(amplitude))
   const db = 20 * Math.log10(amplitude / minAmplitude);
-  
-  // Normalize to typical voice range (30-80 dB)
   return Math.max(30, Math.min(80, db + 40));
 }
 
@@ -80,10 +77,10 @@ export default function LincolnDouglasPractice() {
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackObj, setPlaybackObj] = useState<Audio.Sound | null>(null);
-  const [checklist, setChecklist] = useState(Array(SELF_REVIEW_CHECKLIST.length).fill(false));
-  const [rating, setRating] = useState(3);
   const [showReview, setShowReview] = useState(false);
   const [encouragement, setEncouragement] = useState('');
+  const [rubricVisible, setRubricVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Prep timer logic
   useEffect(() => {
@@ -141,26 +138,14 @@ export default function LincolnDouglasPractice() {
           if (recordingRef.current) {
             const status = await recordingRef.current.getStatusAsync();
             if (status.isRecording) {
-              // Get the actual recording data
               const uri = recordingRef.current.getURI();
               if (uri) {
-                // For real-time analysis, we need to use a different approach
-                // Since expo-av doesn't provide real-time amplitude data directly,
-                // we'll use a more realistic simulation based on microphone input
-                
-                // Create a more realistic amplitude simulation that responds to actual sound
-                // This is a workaround since expo-av doesn't provide real-time amplitude
                 const baseAmplitude = 0.1;
-                const noiseLevel = Math.random() * 0.3; // Simulate background noise
-                const voiceAmplitude = Math.random() * 0.4; // Simulate voice input
-                
-                // Combine to create a more realistic amplitude
+                const noiseLevel = Math.random() * 0.3;
+                const voiceAmplitude = Math.random() * 0.4;
                 const amplitude = baseAmplitude + noiseLevel + voiceAmplitude;
                 const db = calculateDecibels(amplitude);
-                
                 setDecibelLevel(db);
-                
-                // Determine voice status
                 if (db >= 65 && db <= 75) {
                   setVoiceStatus('Good Volume');
                 } else if (db < 65) {
@@ -228,6 +213,7 @@ export default function LincolnDouglasPractice() {
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
+      recordingRef.current = recording;
       setRecording(recording);
       setRecordedUri(null);
       setShowReview(false);
@@ -245,6 +231,7 @@ export default function LincolnDouglasPractice() {
       setRecordedUri(uri);
       setShowReview(true);
       setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
+      setRubricVisible(true);
     } catch (err) {
       Alert.alert('Error', 'Could not stop recording.');
     }
@@ -280,20 +267,47 @@ export default function LincolnDouglasPractice() {
     }
   };
 
-  const toggleChecklist = (idx: number) => {
-    setChecklist((prev) => {
-      const next = [...prev];
-      next[idx] = !next[idx];
-      return next;
-    });
-  };
-
   const resetReview = () => {
     setChecklist(Array(SELF_REVIEW_CHECKLIST.length).fill(false));
     setRating(3);
     setShowReview(false);
     setRecordedUri(null);
     setEncouragement('');
+  };
+
+  const submitScores = async ({ breakdown, total }: { breakdown: Record<string, number>; total: number }) => {
+    try {
+      if (!auth.currentUser) {
+        Alert.alert('Not signed in', 'Please sign in to save scores.');
+        return;
+      }
+      if (!recordedUri) {
+        Alert.alert('No recording', 'Please record first.');
+        return;
+      }
+      setSaving(true);
+      const uid = auth.currentUser.uid;
+      const ts = Date.now();
+      const storageRef = ref(storage, `recordings/${uid}/lincoln-douglas/${ts}.m4a`);
+      const resp = await fetch(recordedUri);
+      const blob = await resp.blob();
+      await uploadBytes(storageRef, blob, { contentType: 'audio/m4a' });
+      const url = await getDownloadURL(storageRef);
+      await addDoc(collection(db, 'userScores'), {
+        uid,
+        event: 'Lincoln Douglas',
+        total: Math.min(100, total),
+        breakdown,
+        recordingUrl: url,
+        createdAt: serverTimestamp(),
+      });
+      Alert.alert('Saved', 'Your score and recording were saved to Scores.');
+      setRubricVisible(false);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save score.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getVoiceStatusColor = () => {
@@ -414,7 +428,7 @@ export default function LincolnDouglasPractice() {
             <ThemedText type="title" style={styles.decibelText}>
               {Math.round(decibelLevel)} dB
             </ThemedText>
-            <ThemedText type="default" style={[styles.voiceStatusText, { color: getVoiceStatusColor() }]}>
+            <ThemedText type="default" style={[styles.voiceStatusText, { color: getVoiceStatusColor() }]}> 
               {voiceStatus}
             </ThemedText>
           </View>
@@ -459,41 +473,35 @@ export default function LincolnDouglasPractice() {
               <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={resetReview}>
                 <Text style={styles.buttonText}>Reset</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.button]} onPress={() => setRubricVisible(true)}>
+                <Text style={styles.buttonText}>{saving ? 'Saving...' : 'Self Review & Save'}</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* Self-Review Checklist */}
+        <ScoreRubricModal
+          visible={rubricVisible}
+          onClose={() => setRubricVisible(false)}
+          onSubmit={submitScores}
+          rubric={RUBRIC}
+          title="Self Review (100 pts)"
+        />
+
+        {/* Self-Review Checklist (legacy, kept for now) */}
         {showReview && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Self-Review Checklist</Text>
-            {SELF_REVIEW_CHECKLIST.map((item, idx) => (
+            {['Did you speak clearly?','Did you stay on topic?','Did you use evidence?','Did you finish in time?','Did you avoid filler words?'].map((item, idx) => (
               <TouchableOpacity
                 key={item}
                 style={styles.checklistRow}
                 onPress={() => toggleChecklist(idx)}
               >
-                <View style={[styles.checkbox, checklist[idx] && styles.checkboxChecked]} />
+                <View style={[styles.checkbox, (Array(5).fill(false)[idx]) && styles.checkboxChecked]} />
                 <Text style={styles.checklistText}>{item}</Text>
               </TouchableOpacity>
             ))}
-            <Text style={styles.sectionTitle}>Rate Yourself</Text>
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>1</Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={1}
-                maximumValue={5}
-                step={1}
-                value={rating}
-                onValueChange={setRating}
-                minimumTrackTintColor="#E20000"
-                maximumTrackTintColor="#ccc"
-                thumbTintColor="#E20000"
-              />
-              <Text style={styles.ratingLabel}>5</Text>
-            </View>
-            <Text style={styles.ratingValue}>Your Rating: {rating}</Text>
             <Text style={styles.encouragement}>{encouragement}</Text>
           </View>
         )}
