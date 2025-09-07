@@ -103,36 +103,6 @@ export default function AssignedPractices() {
     }
   };
 
-  const submit = async () => {
-    if (!openId) return;
-    try {
-      setSaving(true);
-      let submissionAudioUrl: string | null = null;
-      const u = auth.currentUser;
-      if (u && recordingUri) {
-        const res = await fetch(recordingUri);
-        const blob = await res.blob();
-        const key = `recordings/${u.uid}/${openId}.m4a`;
-        const r = ref(storage, key);
-        await uploadBytes(r, blob, { contentType: 'audio/m4a' });
-        submissionAudioUrl = await getDownloadURL(r);
-      }
-      await updateDoc(doc(db, 'userAssignments', openId), {
-        submissionNote: note.trim(),
-        submissionAudioUrl: submissionAudioUrl,
-        status: 'submitted',
-        submittedAt: serverTimestamp(),
-      });
-      close();
-    } catch (e) {
-      Alert.alert('Error', 'Failed to submit.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  
-
   const shareSystem = async () => {
     try {
       if (!recordingUri) {
@@ -147,6 +117,39 @@ export default function AssignedPractices() {
       await Sharing.shareAsync(recordingUri);
     } catch (e) {
       Alert.alert('Share Error', 'Unable to open share sheet.');
+    }
+  };
+
+  const submit = async () => {
+    if (!openId) return;
+    try {
+      setSaving(true);
+      let submissionAudioUrl: string | null = null;
+      const u = auth.currentUser;
+      // Try upload, but do not fail submission if Storage not available
+      if (u && recordingUri) {
+        try {
+          const res = await fetch(recordingUri);
+          const blob = await res.blob();
+          const key = `recordings/${u.uid}/${openId}.m4a`;
+          const r = ref(storage, key);
+          await uploadBytes(r, blob, { contentType: 'audio/m4a' });
+          submissionAudioUrl = await getDownloadURL(r);
+        } catch {
+          submissionAudioUrl = null;
+        }
+      }
+      await updateDoc(doc(db, 'userAssignments', openId), {
+        submissionNote: note.trim(),
+        submissionAudioUrl,
+        status: 'submitted',
+        submittedAt: serverTimestamp(),
+      });
+      close();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to submit.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -218,6 +221,9 @@ export default function AssignedPractices() {
                 <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={isPlaying ? pause : play}>
                   <Text style={styles.btnText}>{isPlaying ? 'Pause' : 'Play'}</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={shareSystem}>
+                  <Text style={styles.btnText}>Share</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={() => setRecordingUri(null)}>
                   <Text style={styles.btnText}>Remove Audio</Text>
                 </TouchableOpacity>
@@ -226,9 +232,6 @@ export default function AssignedPractices() {
             <View style={styles.rowBetween}>
               <TouchableOpacity style={[styles.btn, styles.cancel]} onPress={close}>
                 <Text style={styles.btnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={shareSystem}>
-                <Text style={styles.btnText}>Share</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.btn, styles.save]} onPress={submit} disabled={saving}>
                 <Text style={styles.btnText}>{saving ? 'Submitting...' : 'Submit'}</Text>
