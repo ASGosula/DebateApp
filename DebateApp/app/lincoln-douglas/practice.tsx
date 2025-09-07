@@ -268,8 +268,6 @@ export default function LincolnDouglasPractice() {
   };
 
   const resetReview = () => {
-    setChecklist(Array(SELF_REVIEW_CHECKLIST.length).fill(false));
-    setRating(3);
     setShowReview(false);
     setRecordedUri(null);
     setEncouragement('');
@@ -466,7 +464,7 @@ export default function LincolnDouglasPractice() {
             </TouchableOpacity>
           )}
           {recordedUri && !recording && (
-            <View style={styles.playbackRow}>
+            <View style={styles.playbackCol}>
               <TouchableOpacity style={styles.button} onPress={isPlaying ? stopPlayback : playRecording}>
                 <Text style={styles.buttonText}>{isPlaying ? 'Stop Playback' : 'Play Recording'}</Text>
               </TouchableOpacity>
@@ -486,25 +484,11 @@ export default function LincolnDouglasPractice() {
           onSubmit={submitScores}
           rubric={RUBRIC}
           title="Self Review (100 pts)"
+          onPlay={playRecording}
+          onReset={resetReview}
         />
 
-        {/* Self-Review Checklist (legacy, kept for now) */}
-        {showReview && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Self-Review Checklist</Text>
-            {['Did you speak clearly?','Did you stay on topic?','Did you use evidence?','Did you finish in time?','Did you avoid filler words?'].map((item, idx) => (
-              <TouchableOpacity
-                key={item}
-                style={styles.checklistRow}
-                onPress={() => toggleChecklist(idx)}
-              >
-                <View style={[styles.checkbox, (Array(5).fill(false)[idx]) && styles.checkboxChecked]} />
-                <Text style={styles.checklistText}>{item}</Text>
-              </TouchableOpacity>
-            ))}
-            <Text style={styles.encouragement}>{encouragement}</Text>
-          </View>
-        )}
+        {/* Removed legacy checklist UI */}
       </View>
     </ScrollView>
   );
@@ -727,6 +711,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  playbackCol: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
   },
   sectionTitle: {
     fontWeight: 'bold',

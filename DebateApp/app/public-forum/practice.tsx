@@ -455,7 +455,7 @@ export default function PublicForumPractice() {
             </TouchableOpacity>
           )}
           {recordedUri && !recording && (
-            <View style={styles.playbackRow}>
+            <View style={styles.playbackCol}>
               <TouchableOpacity style={styles.button} onPress={isPlaying ? stopPlayback : playRecording}>
                 <Text style={styles.buttonText}>{isPlaying ? 'Stop Playback' : 'Play Recording'}</Text>
               </TouchableOpacity>
@@ -475,6 +475,8 @@ export default function PublicForumPractice() {
           onSubmit={submitScores}
           rubric={RUBRIC}
           title="Self Review (100 pts)"
+          onPlay={playRecording}
+          onReset={resetReview}
         />
       </View>
     </ScrollView>
@@ -690,4 +692,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitleText: {},
+  playbackCol: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+  },
 }); 

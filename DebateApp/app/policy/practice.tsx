@@ -477,7 +477,7 @@ export default function PolicyPractice() {
             </TouchableOpacity>
           )}
           {recordedUri && !recording && (
-            <View style={styles.playbackRow}>
+            <View style={styles.playbackCol}>
               <TouchableOpacity style={styles.button} onPress={isPlaying ? stopPlayback : playRecording}>
                 <Text style={styles.buttonText}>{isPlaying ? 'Stop Playback' : 'Play Recording'}</Text>
               </TouchableOpacity>
@@ -531,6 +531,8 @@ export default function PolicyPractice() {
           onSubmit={submitScores}
           rubric={RUBRIC}
           title="Self Review (100 pts)"
+          onPlay={playRecording}
+          onReset={resetReview}
         />
       </View>
     </ScrollView>
@@ -754,6 +756,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  playbackCol: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
   },
   sectionTitle: {
     fontWeight: 'bold',

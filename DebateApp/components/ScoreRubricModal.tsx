@@ -18,12 +18,16 @@ export default function ScoreRubricModal({
   onSubmit,
   rubric,
   title = 'Self Review',
+  onPlay,
+  onReset,
 }: {
   visible: boolean;
   onClose: () => void;
   onSubmit: (result: RubricResult) => void;
   rubric: RubricItem[];
   title?: string;
+  onPlay?: () => void;
+  onReset?: () => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
 
@@ -44,7 +48,6 @@ export default function ScoreRubricModal({
       breakdown[r.key] = n;
     });
     onSubmit({ breakdown, total });
-    setValues({});
   };
 
   return (
@@ -68,6 +71,16 @@ export default function ScoreRubricModal({
             ))}
           </ScrollView>
           <View style={styles.actions}>
+            {onPlay && (
+              <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={onPlay}>
+                <Text style={styles.btnText}>Preview</Text>
+              </TouchableOpacity>
+            )}
+            {onReset && (
+              <TouchableOpacity style={[styles.btn, styles.neutral]} onPress={onReset}>
+                <Text style={styles.btnText}>Reset</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={[styles.btn, styles.cancel]} onPress={onClose}>
               <Text style={styles.btnText}>Cancel</Text>
             </TouchableOpacity>
@@ -88,10 +101,11 @@ const styles = StyleSheet.create({
   subtitle: { color: '#555', marginTop: 4, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 6 },
   label: { flex: 1, marginRight: 12, fontSize: 16, color: '#222' },
-  input: { width: 90, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, textAlign: 'center' },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
-  btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 },
-  cancel: { backgroundColor: '#e0e0e0' },
+  input: { width: 100, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, textAlign: 'center' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 12 },
+  btn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, marginLeft: 8, marginTop: 8 },
+  cancel: { backgroundColor: '#9e9e9e' },
+  neutral: { backgroundColor: '#546e7a' },
   save: { backgroundColor: '#E20000' },
   btnText: { color: '#fff', fontWeight: '700' },
 });

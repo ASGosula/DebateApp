@@ -175,8 +175,7 @@ export default function CongressPractice() {
   };
 
   const resetReview = () => {
-    setChecklist(Array(SELF_REVIEW_CHECKLIST.length).fill(false));
-    setRating(3);
+    setChecklist((prev) => prev.map(() => false));
     setShowReview(false);
     setRecordedUri(null);
     setEncouragement('');
@@ -316,7 +315,7 @@ export default function CongressPractice() {
             </TouchableOpacity>
           )}
           {recordedUri && !recording && (
-            <View style={styles.playbackRow}>
+            <View style={styles.playbackCol}>
               <TouchableOpacity style={styles.button} onPress={isPlaying ? stopPlayback : playRecording}>
                 <Text style={styles.buttonText}>{isPlaying ? 'Stop Playback' : 'Play Recording'}</Text>
               </TouchableOpacity>
@@ -370,6 +369,8 @@ export default function CongressPractice() {
           onSubmit={submitScores}
           rubric={RUBRIC}
           title="Self Review (100 pts)"
+          onPlay={playRecording}
+          onReset={resetReview}
         />
       </View>
     </ScrollView>
@@ -503,6 +504,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
+  },
+  playbackCol: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 18,
