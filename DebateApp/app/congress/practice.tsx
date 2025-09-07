@@ -7,9 +7,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { useRouter } from 'expo-router';
 import ScoreRubricModal, { RubricItem } from '../../components/ScoreRubricModal';
-import { auth, db, storage } from '../../constants/firebase';
+import { auth, db } from '../../constants/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 type RootStackParamList = {
   'Practice Speaking Congress': undefined;
@@ -175,7 +174,6 @@ export default function CongressPractice() {
   };
 
   const resetReview = () => {
-    setChecklist((prev) => prev.map(() => false));
     setShowReview(false);
     setRecordedUri(null);
     setEncouragement('');
@@ -187,27 +185,16 @@ export default function CongressPractice() {
         Alert.alert('Not signed in', 'Please sign in to save scores.');
         return;
       }
-      if (!recordedUri) {
-        Alert.alert('No recording', 'Please record first.');
-        return;
-      }
       setSaving(true);
       const uid = auth.currentUser.uid;
-      const ts = Date.now();
-      const storageRef = ref(storage, `recordings/${uid}/congress/${ts}.m4a`);
-      const resp = await fetch(recordedUri);
-      const blob = await resp.blob();
-      await uploadBytes(storageRef, blob, { contentType: 'audio/m4a' });
-      const url = await getDownloadURL(storageRef);
       await addDoc(collection(db, 'userScores'), {
         uid,
         event: 'Congress',
         total: Math.min(100, total),
         breakdown,
-        recordingUrl: url,
         createdAt: serverTimestamp(),
       });
-      Alert.alert('Saved', 'Your score and recording were saved to Scores.');
+      Alert.alert('Saved', 'Your score was saved to Scores.');
       setRubricVisible(false);
     } catch (e) {
       Alert.alert('Error', 'Failed to save score.');

@@ -5,9 +5,8 @@ import { Audio } from 'expo-av';
 import Slider from '@react-native-community/slider';
 import { Link } from 'expo-router';
 import ScoreRubricModal, { RubricItem } from '../../components/ScoreRubricModal';
-import { auth, db, storage } from '../../constants/firebase';
+import { auth, db } from '../../constants/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const PREP_TIME_SECONDS = 8 * 60; // Policy prep is often 8-10 min
 const { width } = Dimensions.get('window');
@@ -292,27 +291,16 @@ export default function PolicyPractice() {
         Alert.alert('Not signed in', 'Please sign in to save scores.');
         return;
       }
-      if (!recordedUri) {
-        Alert.alert('No recording', 'Please record first.');
-        return;
-      }
       setSaving(true);
       const uid = auth.currentUser.uid;
-      const ts = Date.now();
-      const storageRef = ref(storage, `recordings/${uid}/policy/${ts}.m4a`);
-      const resp = await fetch(recordedUri);
-      const blob = await resp.blob();
-      await uploadBytes(storageRef, blob, { contentType: 'audio/m4a' });
-      const url = await getDownloadURL(storageRef);
       await addDoc(collection(db, 'userScores'), {
         uid,
         event: 'Policy',
         total: Math.min(100, total),
         breakdown,
-        recordingUrl: url,
         createdAt: serverTimestamp(),
       });
-      Alert.alert('Saved', 'Your score and recording were saved to Scores.');
+      Alert.alert('Saved', 'Your score was saved to Scores.');
       setRubricVisible(false);
     } catch (e) {
       Alert.alert('Error', 'Failed to save score.');
