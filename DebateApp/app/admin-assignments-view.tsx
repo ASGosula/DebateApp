@@ -57,6 +57,9 @@ export default function AdminAssignmentsView() {
           {item.assignmentDescription ? <Text style={styles.meta}>{item.assignmentDescription}</Text> : null}
           <Text style={styles.meta}>User: {item.uid}</Text>
           <Text style={styles.meta}>Status: {item.status}</Text>
+          {item.submissionAudioUrl ? (
+            <Text style={[styles.meta, { color: '#1b5e20' }]}>Audio submitted</Text>
+          ) : null}
           <TextInput
             style={styles.input}
             placeholder="Write feedback..."

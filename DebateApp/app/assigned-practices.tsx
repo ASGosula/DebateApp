@@ -1,13 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
-import { auth, db } from '../constants/firebase';
-import { collection, onSnapshot, query, updateDoc, doc, where } from 'firebase/firestore';
+import { auth, db, storage } from '../constants/firebase';
+import { collection, onSnapshot, query, updateDoc, doc, where, serverTimestamp } from 'firebase/firestore';
+import { Audio } from 'expo-av';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function AssignedPractices() {
   const [items, setItems] = useState<any[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     const u = auth.currentUser;
@@ -23,17 +29,98 @@ export default function AssignedPractices() {
   const assigned = useMemo(() => items.filter(i => i.status !== 'feedback' && i.status !== 'submitted'), [items]);
   const completed = useMemo(() => items.filter(i => i.status === 'submitted' || i.status === 'feedback'), [items]);
 
-  const open = (id: string) => { setOpenId(id); setNote(''); };
-  const close = () => { setOpenId(null); setNote(''); };
+  const open = (id: string) => { setOpenId(id); setNote(''); setRecording(null); setRecordingUri(null); cleanupSound(); };
+  const close = () => { setOpenId(null); setNote(''); stopRecordingIfNeeded(); cleanupSound(); };
+
+  const startRecording = async () => {
+    try {
+      await Audio.requestPermissionsAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY);
+      await rec.startAsync();
+      setRecording(rec);
+    } catch (e) {
+      Alert.alert('Recording Error', 'Unable to start recording.');
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      if (!recording) return;
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      setRecordingUri(uri || null);
+    } catch (e) {
+      Alert.alert('Recording Error', 'Unable to stop recording.');
+    }
+  };
+
+  const stopRecordingIfNeeded = async () => {
+    try {
+      if (recording) {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setRecording(null);
+        setRecordingUri(uri || null);
+      }
+    } catch {
+      // noop
+    }
+  };
+
+  const play = async () => {
+    try {
+      if (!recordingUri) return;
+      await cleanupSound();
+      const { sound: s } = await Audio.Sound.createAsync({ uri: recordingUri });
+      setSound(s);
+      s.setOnPlaybackStatusUpdate((status: any) => setIsPlaying(!!status.isPlaying));
+      await s.playAsync();
+    } catch (e) {
+      Alert.alert('Playback Error', 'Unable to play the recording.');
+    }
+  };
+
+  const pause = async () => {
+    try {
+      if (!sound) return;
+      const status = await sound.getStatusAsync();
+      if ((status as any).isPlaying) await sound.pauseAsync();
+    } catch {}
+  };
+
+  const cleanupSound = async () => {
+    try {
+      if (sound) {
+        await sound.unloadAsync();
+      }
+    } catch {} finally {
+      setSound(null);
+      setIsPlaying(false);
+    }
+  };
 
   const submit = async () => {
     if (!openId) return;
     try {
       setSaving(true);
+      let submissionAudioUrl: string | null = null;
+      const u = auth.currentUser;
+      if (u && recordingUri) {
+        const res = await fetch(recordingUri);
+        const blob = await res.blob();
+        const key = `recordings/${u.uid}/${openId}.m4a`;
+        const r = ref(storage, key);
+        await uploadBytes(r, blob, { contentType: 'audio/m4a' });
+        submissionAudioUrl = await getDownloadURL(r);
+      }
       await updateDoc(doc(db, 'userAssignments', openId), {
         submissionNote: note.trim(),
+        submissionAudioUrl: submissionAudioUrl,
         status: 'submitted',
-        submittedAt: new Date(),
+        submittedAt: serverTimestamp(),
       });
       close();
     } catch (e) {
@@ -73,6 +160,9 @@ export default function AssignedPractices() {
             </View>
             <Text style={styles.status}>{i.status}</Text>
           </View>
+          {i.submissionAudioUrl ? (
+            <Text style={{ color: '#555', marginTop: 6 }}>Audio submitted</Text>
+          ) : null}
           {i.feedback ? (
             <View style={styles.feedbackBox}>
               <Text style={styles.feedbackTitle}>Feedback</Text>
@@ -93,6 +183,26 @@ export default function AssignedPractices() {
               value={note}
               onChangeText={setNote}
             />
+            <View style={{ height: 10 }} />
+            {recording ? (
+              <TouchableOpacity style={[styles.btn, styles.warn]} onPress={stopRecording}>
+                <Text style={styles.btnText}>Stop Recording</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={[styles.btn, styles.save]} onPress={startRecording}>
+                <Text style={styles.btnText}>Start Recording</Text>
+              </TouchableOpacity>
+            )}
+            {recordingUri ? (
+              <View style={styles.rowBetween}>
+                <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={isPlaying ? pause : play}>
+                  <Text style={styles.btnText}>{isPlaying ? 'Pause' : 'Play'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={() => setRecordingUri(null)}>
+                  <Text style={styles.btnText}>Remove Audio</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
             <View style={styles.rowBetween}>
               <TouchableOpacity style={[styles.btn, styles.cancel]} onPress={close}>
                 <Text style={styles.btnText}>Cancel</Text>
@@ -123,9 +233,11 @@ const styles = StyleSheet.create({
   modal: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '95%', maxWidth: 520 },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, minHeight: 90, textAlignVertical: 'top' },
-  btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
+  btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, marginTop: 10 },
   cancel: { backgroundColor: '#9e9e9e' },
   save: { backgroundColor: '#E20000' },
+  secondary: { backgroundColor: '#6d6d6d' },
+  warn: { backgroundColor: '#FF6B6B' },
   btnText: { color: '#fff', fontWeight: '700' },
   meta: { color: '#555' },
   feedbackBox: { marginTop: 8, padding: 10, backgroundColor: '#f4fff5', borderRadius: 8, borderWidth: 1, borderColor: '#e0f2e9' },
