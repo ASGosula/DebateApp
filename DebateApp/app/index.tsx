@@ -251,6 +251,12 @@ export default function IndexRedirect() {
             >
               <Text style={styles.menuItemText}>📚 Resources</Text>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => navigateTo('/scores')}
+            >
+              <Text style={styles.menuItemText}>📈 Scores</Text>
+            </TouchableOpacity>
             {isAdmin && (
               <TouchableOpacity 
                 style={styles.menuItem} 
