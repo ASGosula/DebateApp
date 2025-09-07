@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../constants/firebase';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Animated, Modal, TextInput, Alert, ActivityIndicator, Keyboard, Platform, TouchableWithoutFeedback, KeyboardAvoidingView } from 'react-native';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc, serverTimestamp } from 'firebase/firestore';
 
 const BUTTON_COLOR = '#E20000';
 const SCREENSHOT = require('../assets/images/Screenshot 2025-06-19 at 10.18.03 AM.png');
@@ -26,6 +26,18 @@ export default function IndexRedirect() {
   const [addTournamentVisible, setAddTournamentVisible] = useState(false);
   const [newTournament, setNewTournament] = useState({ name: '', date: '', location: '', registrationDeadline: '' });
   const [loadingTournaments, setLoadingTournaments] = useState(true);
+
+  const formatDate = (val: any) => {
+    try {
+      if (!val) return '';
+      // Firestore Timestamp
+      if (val.toDate) return val.toDate().toISOString().split('T')[0];
+      if (typeof val === 'string') return val.split('T')[0];
+      return '';
+    } catch {
+      return '';
+    }
+  };
 
   // Auth check
   useEffect(() => {
@@ -60,22 +72,35 @@ export default function IndexRedirect() {
   // Firestore announcements sync
   useEffect(() => {
     setLoadingAnnouncements(true);
-    const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setAnnouncements(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      setLoadingAnnouncements(false);
-    });
+    const qRef = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(
+      qRef,
+      (snapshot) => {
+        setAnnouncements(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        setLoadingAnnouncements(false);
+      },
+      () => {
+        // permission or network error -> stop spinner
+        setLoadingAnnouncements(false);
+      }
+    );
     return () => unsub();
   }, []);
 
   // Firestore tournaments sync
   useEffect(() => {
     setLoadingTournaments(true);
-    const q = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setTournaments(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      setLoadingTournaments(false);
-    });
+    const qRef = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(
+      qRef,
+      (snapshot) => {
+        setTournaments(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        setLoadingTournaments(false);
+      },
+      () => {
+        setLoadingTournaments(false);
+      }
+    );
     return () => unsub();
   }, []);
 
@@ -145,7 +170,8 @@ export default function IndexRedirect() {
       await addDoc(collection(db, 'announcements'), {
         title: newAnnouncementTitle.trim(),
         content: newAnnouncementContent.trim(),
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid || null,
       });
       setNewAnnouncementTitle('');
       setNewAnnouncementContent('');
@@ -190,7 +216,8 @@ export default function IndexRedirect() {
     try {
       await addDoc(collection(db, 'tournaments'), {
         ...newTournament,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid || null,
       });
       setNewTournament({ name: '', date: '', location: '', registrationDeadline: '' });
       setAddTournamentVisible(false);
@@ -452,7 +479,7 @@ export default function IndexRedirect() {
                   )}
                 </View>
                 <Text style={styles.newsContent}>{item.content}</Text>
-                <Text style={styles.newsDate}>{item.createdAt?.split('T')[0]}</Text>
+                <Text style={styles.newsDate}>{formatDate(item.createdAt)}</Text>
               </View>
             ))
           )}
@@ -486,7 +513,7 @@ export default function IndexRedirect() {
           )}
         </View>
         {/* Quick Access Buttons */}
-        <View style={styles.section}>
+        <View className="section">
           <Text style={styles.sectionTitle}>🚀 Quick Access</Text>
           <TouchableOpacity
             style={styles.quickButton}
