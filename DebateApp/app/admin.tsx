@@ -1,17 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { auth, db } from '../constants/firebase';
-import { collection, doc, getDoc, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
 
 export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<any[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    // verify current user is admin via users doc
     const check = async () => {
       const u = auth.currentUser;
       if (!u) {
@@ -40,9 +40,14 @@ export default function AdminPage() {
     return () => unsub();
   }, []);
 
-  const pending = useMemo(() => users.filter(u => u.status === 'pending'), [users]);
-  const waitlist = useMemo(() => users.filter(u => u.status === 'waitlist'), [users]);
-  const approved = useMemo(() => users.filter(u => u.status === 'approved'), [users]);
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return users;
+    return users.filter(u =>
+      (u.displayName || '').toLowerCase().includes(term) ||
+      (u.email || '').toLowerCase().includes(term)
+    );
+  }, [users, search]);
 
   const setStatus = async (uid: string, status: 'pending' | 'approved' | 'rejected' | 'waitlist') => {
     try {
@@ -58,6 +63,25 @@ export default function AdminPage() {
     } catch {
       Alert.alert('Error', 'Failed to update admin flag');
     }
+  };
+
+  const deleteUserDoc = async (uid: string) => {
+    Alert.alert(
+      'Delete Account',
+      'This will remove the user document. This does NOT delete Firebase Auth user. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive', onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'users', uid));
+            } catch {
+              Alert.alert('Error', 'Failed to delete user.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderUser = ({ item }: any) => (
@@ -86,6 +110,9 @@ export default function AdminPage() {
             <Text style={styles.btnText}>Make Admin</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity style={[styles.btn, styles.delete]} onPress={() => deleteUserDoc(item.id)}>
+          <Text style={styles.btnText}>Delete</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -109,12 +136,19 @@ export default function AdminPage() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Admin Dashboard</Text>
-      <Text style={styles.sectionTitle}>Pending ({pending.length})</Text>
-      <FlatList data={pending} renderItem={renderUser} keyExtractor={(i) => i.id} ListEmptyComponent={<Text style={styles.empty}>No pending users</Text>} />
-      <Text style={styles.sectionTitle}>Waitlist ({waitlist.length})</Text>
-      <FlatList data={waitlist} renderItem={renderUser} keyExtractor={(i) => i.id} ListEmptyComponent={<Text style={styles.empty}>No waitlisted users</Text>} />
-      <Text style={styles.sectionTitle}>Approved ({approved.length})</Text>
-      <FlatList data={approved} renderItem={renderUser} keyExtractor={(i) => i.id} ListEmptyComponent={<Text style={styles.empty}>No approved users</Text>} />
+      <TextInput
+        style={styles.search}
+        placeholder="Search by name or email"
+        placeholderTextColor="#888"
+        value={search}
+        onChangeText={setSearch}
+      />
+      <FlatList
+        data={filtered}
+        renderItem={renderUser}
+        keyExtractor={(i) => i.id}
+        ListEmptyComponent={<Text style={styles.empty}>No users</Text>}
+      />
     </View>
   );
 }
@@ -123,7 +157,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginTop: 16, marginBottom: 8 },
+  search: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 },
   empty: { color: '#666' },
   card: { borderWidth: 1, borderColor: '#eee', borderRadius: 10, padding: 12, marginBottom: 10 },
   name: { fontSize: 16, fontWeight: '600' },
@@ -136,4 +170,5 @@ const styles = StyleSheet.create({
   waitlist: { backgroundColor: '#f9a825' },
   reject: { backgroundColor: '#c62828' },
   secondary: { backgroundColor: '#3f51b5' },
+  delete: { backgroundColor: '#b00020' },
 });
