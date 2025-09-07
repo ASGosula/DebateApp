@@ -52,7 +52,10 @@ export default function AssignedPractices() {
       {assigned.map(i => (
         <TouchableOpacity key={i.id} style={styles.card} onPress={() => open(i.id)}>
           <View style={styles.dot(i.status)} />
-          <Text style={styles.cardTitle}>{i.assignmentId}</Text>
+          <View style={{ marginLeft: 8, flex: 1 }}>
+            <Text style={styles.cardTitle}>{i.assignmentTitle ?? i.assignmentId}</Text>
+            {i.assignmentDescription ? <Text style={styles.meta}>{i.assignmentDescription}</Text> : null}
+          </View>
         </TouchableOpacity>
       ))}
 
@@ -61,9 +64,12 @@ export default function AssignedPractices() {
       {completed.map(i => (
         <View key={i.id} style={[styles.card, i.status === 'feedback' && styles.cardGreen]}>
           <View style={styles.rowBetween}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <View style={styles.dot(i.status)} />
-              <Text style={styles.cardTitle}>{i.assignmentId}</Text>
+              <View style={{ marginLeft: 8, flex: 1 }}>
+                <Text style={styles.cardTitle}>{i.assignmentTitle ?? i.assignmentId}</Text>
+                {i.assignmentDescription ? <Text style={styles.meta}>{i.assignmentDescription}</Text> : null}
+              </View>
             </View>
             <Text style={styles.status}>{i.status}</Text>
           </View>
@@ -121,4 +127,8 @@ const styles = StyleSheet.create({
   cancel: { backgroundColor: '#9e9e9e' },
   save: { backgroundColor: '#E20000' },
   btnText: { color: '#fff', fontWeight: '700' },
+  meta: { color: '#555' },
+  feedbackBox: { marginTop: 8, padding: 10, backgroundColor: '#f4fff5', borderRadius: 8, borderWidth: 1, borderColor: '#e0f2e9' },
+  feedbackTitle: { fontWeight: '700', marginBottom: 4, color: '#2e7d32' },
+  feedbackText: { color: '#1b5e20' },
 });

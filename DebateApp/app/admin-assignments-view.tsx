@@ -53,7 +53,8 @@ export default function AdminAssignmentsView() {
       <Text style={styles.title}>View Assignments</Text>
       {items.map(item => (
         <View key={item.id} style={[styles.card, item.status === 'feedback' && styles.cardGreen]}>
-          <Text style={styles.header}>{item.assignmentId}</Text>
+          <Text style={styles.header}>{item.assignmentTitle ?? item.assignmentId}</Text>
+          {item.assignmentDescription ? <Text style={styles.meta}>{item.assignmentDescription}</Text> : null}
           <Text style={styles.meta}>User: {item.uid}</Text>
           <Text style={styles.meta}>Status: {item.status}</Text>
           <TextInput

@@ -46,16 +46,19 @@ export default function AdminAssignments() {
     setSaving(true);
     try {
       const creator = auth.currentUser?.uid;
+      const cleanTitle = title.trim();
+      const cleanDesc = description.trim();
       const assignmentRef = await addDoc(collection(db, 'assignments'), {
-        title: title.trim(),
-        description: description.trim(),
+        title: cleanTitle,
+        description: cleanDesc,
         createdBy: creator,
         createdAt: serverTimestamp(),
       });
-      // fan-out to userAssignments
       await Promise.all(
         targets.map(uid => addDoc(collection(db, 'userAssignments'), {
           assignmentId: assignmentRef.id,
+          assignmentTitle: cleanTitle,
+          assignmentDescription: cleanDesc,
           uid,
           status: 'assigned', // assigned | submitted | feedback
           createdAt: serverTimestamp(),
