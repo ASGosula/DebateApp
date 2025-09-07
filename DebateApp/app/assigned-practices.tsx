@@ -4,7 +4,6 @@ import { auth, db, storage } from '../constants/firebase';
 import { collection, onSnapshot, query, updateDoc, doc, where, serverTimestamp } from 'firebase/firestore';
 import { Audio } from 'expo-av';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import * as MailComposer from 'expo-mail-composer';
 import * as Sharing from 'expo-sharing';
 
 export default function AssignedPractices() {
@@ -132,28 +131,7 @@ export default function AssignedPractices() {
     }
   };
 
-  const shareViaEmail = async () => {
-    try {
-      const can = await MailComposer.isAvailableAsync();
-      if (!can) {
-        Alert.alert('Email not available', 'No email accounts are configured on this device.');
-        return;
-      }
-      const u = auth.currentUser;
-      const recipient = 'asgosula@gmail.com';
-      const subject = 'Debate Assignment Submission';
-      const body = `User: ${u?.email || ''}\nAssignment: ${openId || ''}\nNote: ${note.trim()}`;
-      const options: MailComposer.MailComposerOptions = {
-        recipients: [recipient],
-        subject,
-        body,
-        attachments: recordingUri ? [recordingUri] : undefined,
-      };
-      await MailComposer.composeAsync(options);
-    } catch (e) {
-      Alert.alert('Email Error', 'Unable to open email composer.');
-    }
-  };
+  
 
   const shareSystem = async () => {
     try {
@@ -248,9 +226,6 @@ export default function AssignedPractices() {
             <View style={styles.rowBetween}>
               <TouchableOpacity style={[styles.btn, styles.cancel]} onPress={close}>
                 <Text style={styles.btnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={shareViaEmail}>
-                <Text style={styles.btnText}>Share via Email</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={shareSystem}>
                 <Text style={styles.btnText}>Share</Text>
