@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert, ScrollView } from 'react-native';
 import { auth, db } from '../constants/firebase';
-import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 
 export default function AdminAssignments() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [category, setCategory] = useState<'congress' | 'lincoln-douglas' | 'public-forum' | 'policy' | ''>('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
@@ -38,7 +39,12 @@ export default function AdminAssignments() {
       Alert.alert('Missing', 'Please enter a title and description.');
       return;
     }
-    const targets = users.filter(u => selected[u.id]).map(u => u.id);
+    let targets = users.filter(u => selected[u.id]).map(u => u.id);
+    if (category) {
+      const catTargets = users.filter(u => (u as any).category === category).map(u => u.id);
+      const set = new Set([...targets, ...catTargets]);
+      targets = Array.from(set);
+    }
     if (targets.length === 0) {
       Alert.alert('No users', 'Select at least one user to assign.');
       return;
@@ -92,6 +98,24 @@ export default function AdminAssignments() {
         onChangeText={setDescription}
         multiline
       />
+      <Text style={styles.subtitle}>Assign by Category (optional)</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+        {[
+          { k: 'congress', label: 'Congress' },
+          { k: 'lincoln-douglas', label: 'Lincoln-Douglas' },
+          { k: 'public-forum', label: 'Public Forum' },
+          { k: 'policy', label: 'Policy' },
+        ].map(opt => (
+          <TouchableOpacity key={opt.k} style={[styles.chip, category === (opt.k as any) && styles.chipOn]} onPress={() => setCategory(opt.k as any)}>
+            <Text style={[styles.chipText, category === (opt.k as any) && styles.chipTextOn]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+        {category ? (
+          <TouchableOpacity style={[styles.chip, { borderColor: '#b00020' }]} onPress={() => setCategory('')}>
+            <Text style={[styles.chipText, { color: '#b00020' }]}>Clear</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
       <Text style={styles.subtitle}>Select Users ({selectedCount})</Text>
       {users.map(u => (
         <TouchableOpacity key={u.id} style={styles.userRow} onPress={() => toggle(u.id)}>
@@ -114,6 +138,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 12 },
   subtitle: { fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ccc' },
+  chipOn: { backgroundColor: '#E20000', borderColor: '#E20000' },
+  chipText: { color: '#333', fontWeight: '600' },
+  chipTextOn: { color: '#fff' },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 },
   textarea: { minHeight: 100, textAlignVertical: 'top' },
   userRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },

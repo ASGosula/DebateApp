@@ -15,6 +15,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [category, setCategory] = useState<'congress' | 'lincoln-douglas' | 'public-forum' | 'policy' | ''>('');
 
   const handleSignup = async () => {
     setError('');
@@ -40,6 +41,7 @@ export default function SignupPage() {
         uid,
         email: email.trim().toLowerCase(),
         displayName: displayName.trim(),
+        category: category || null,
         status: isSeedAdmin ? 'approved' : 'pending', // pending | approved | rejected | waitlist
         isAdmin: isSeedAdmin,
         createdAt: serverTimestamp(),
@@ -100,6 +102,23 @@ export default function SignupPage() {
         autoComplete="new-password"
         textContentType="newPassword"
       />
+      <Text style={styles.label}>Select Debate Category</Text>
+      <View style={styles.categoryRow}>
+        {[
+          { k: 'congress', label: 'Congress' },
+          { k: 'lincoln-douglas', label: 'Lincoln-Douglas' },
+          { k: 'public-forum', label: 'Public Forum' },
+          { k: 'policy', label: 'Policy' },
+        ].map(opt => (
+          <TouchableOpacity
+            key={opt.k}
+            style={[styles.chip, category === opt.k ? styles.chipOn : undefined]}
+            onPress={() => setCategory(opt.k as any)}
+          >
+            <Text style={[styles.chipText, category === opt.k ? styles.chipTextOn : undefined]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <TouchableOpacity style={styles.button} onPress={handleSignup} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign Up</Text>}
@@ -185,4 +204,10 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 15,
   },
+  label: { width: width * 0.8, color: '#333', marginBottom: 8, fontWeight: '600' },
+  categoryRow: { width: width * 0.8, flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ccc' },
+  chipOn: { backgroundColor: '#E20000', borderColor: '#E20000' },
+  chipText: { color: '#333', fontWeight: '600' },
+  chipTextOn: { color: '#fff' },
 }); 

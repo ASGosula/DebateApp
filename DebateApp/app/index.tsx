@@ -280,6 +280,12 @@ export default function IndexRedirect() {
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.menuItem} 
+              onPress={() => navigateTo('/profile')}
+            >
+              <Text style={styles.menuItemText}>👤 Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.menuItem} 
               onPress={() => navigateTo('/scores')}
             >
               <Text style={styles.menuItemText}>📈 Scores</Text>
