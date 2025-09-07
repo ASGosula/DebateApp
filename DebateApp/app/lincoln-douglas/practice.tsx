@@ -7,6 +7,7 @@ import { Link } from 'expo-router';
 import ScoreRubricModal, { RubricItem } from '../../components/ScoreRubricModal';
 import { auth, db } from '../../constants/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import SuccessOverlay from '../../components/SuccessOverlay';
 
 const PREP_TIME_SECONDS = 4 * 60; // 4 minutes
 const { width } = Dimensions.get('window');
@@ -80,6 +81,7 @@ export default function LincolnDouglasPractice() {
   const [encouragement, setEncouragement] = useState('');
   const [rubricVisible, setRubricVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
 
   // Prep timer logic
   useEffect(() => {
@@ -287,8 +289,8 @@ export default function LincolnDouglasPractice() {
         breakdown,
         createdAt: serverTimestamp(),
       });
-      Alert.alert('Saved', 'Your score was saved to Scores.');
       setRubricVisible(false);
+      setToastVisible(true);
     } catch (e) {
       Alert.alert('Error', 'Failed to save score.');
     } finally {
@@ -475,6 +477,7 @@ export default function LincolnDouglasPractice() {
           onPlay={playRecording}
           onReset={resetReview}
         />
+        <SuccessOverlay visible={toastVisible} title="Saved!" subtitle="Score added to your history" onHide={() => setToastVisible(false)} />
 
         {/* Removed legacy checklist UI */}
       </View>

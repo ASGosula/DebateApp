@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import ScoreRubricModal, { RubricItem } from '../../components/ScoreRubricModal';
 import { auth, db } from '../../constants/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import SuccessOverlay from '../../components/SuccessOverlay';
 
 type RootStackParamList = {
   'Practice Speaking Congress': undefined;
@@ -70,6 +71,7 @@ export default function CongressPractice() {
   const [encouragement, setEncouragement] = useState('');
   const [rubricVisible, setRubricVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
 
   // Prep timer logic
   useEffect(() => {
@@ -194,8 +196,8 @@ export default function CongressPractice() {
         breakdown,
         createdAt: serverTimestamp(),
       });
-      Alert.alert('Saved', 'Your score was saved to Scores.');
       setRubricVisible(false);
+      setToastVisible(true);
     } catch (e) {
       Alert.alert('Error', 'Failed to save score.');
     } finally {
@@ -359,6 +361,7 @@ export default function CongressPractice() {
           onPlay={playRecording}
           onReset={resetReview}
         />
+        <SuccessOverlay visible={toastVisible} title="Saved!" subtitle="Score added to your history" onHide={() => setToastVisible(false)} />
       </View>
     </ScrollView>
   );

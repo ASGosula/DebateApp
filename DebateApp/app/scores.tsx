@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { collection, onSnapshot, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../constants/firebase';
 import { Audio } from 'expo-av';
+import SuccessOverlay from '../components/SuccessOverlay';
 
 export default function ScoresPage() {
   const [scores, setScores] = useState<any[]>([]);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [sound, setSound] = useState<any>(null);
+  const [toastVisible, setToastVisible] = useState(false);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -56,6 +58,7 @@ export default function ScoresPage() {
   const deleteScore = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'userScores', id));
+      setToastVisible(true);
     } catch (e) {
       Alert.alert('Error', 'Failed to delete score. Check Firestore rules allow delete.');
     }
@@ -81,6 +84,7 @@ export default function ScoresPage() {
           </View>
         </View>
       ))}
+      <SuccessOverlay visible={toastVisible} title="Deleted" subtitle="Score removed" onHide={() => setToastVisible(false)} />
     </ScrollView>
   );
 }
