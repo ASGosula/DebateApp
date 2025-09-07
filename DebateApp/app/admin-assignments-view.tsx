@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { auth, db } from '../constants/firebase';
 import { collection, doc, getDoc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
 
@@ -28,6 +28,20 @@ export default function AdminAssignmentsView() {
     };
     init();
   }, []);
+
+  const openUrl = async (url?: string) => {
+    try {
+      if (!url) return;
+      const can = await Linking.canOpenURL(url);
+      if (!can) {
+        Alert.alert('Cannot open', 'No app can open this link.');
+        return;
+      }
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Cannot open', 'Failed to open the link.');
+    }
+  };
 
   const sendFeedback = async (id: string) => {
     try {
@@ -58,7 +72,9 @@ export default function AdminAssignmentsView() {
           <Text style={styles.meta}>User: {item.uid}</Text>
           <Text style={styles.meta}>Status: {item.status}</Text>
           {item.submissionAudioUrl ? (
-            <Text style={[styles.meta, { color: '#1b5e20' }]}>Audio submitted</Text>
+            <TouchableOpacity style={styles.openBtn} onPress={() => openUrl(item.submissionAudioUrl)}>
+              <Text style={styles.openBtnText}>Open Recording</Text>
+            </TouchableOpacity>
           ) : null}
           <TextInput
             style={styles.input}
@@ -87,4 +103,6 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, minHeight: 80, textAlignVertical: 'top' },
   btn: { backgroundColor: '#E20000', paddingVertical: 10, borderRadius: 10, alignItems: 'center', marginTop: 8 },
   btnText: { color: '#fff', fontWeight: '700' },
+  openBtn: { backgroundColor: '#1b5e20', paddingVertical: 8, borderRadius: 8, alignItems: 'center', marginTop: 6, marginBottom: 6 },
+  openBtnText: { color: '#fff', fontWeight: '700' },
 });
