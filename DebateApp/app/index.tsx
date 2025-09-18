@@ -139,14 +139,14 @@ export default function IndexRedirect() {
       Animated.timing(slideAnim, {
         toValue: -width,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start(() => setMenuVisible(false));
     } else {
       setMenuVisible(true);
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     }
   };
@@ -289,6 +289,12 @@ export default function IndexRedirect() {
               onPress={() => navigateTo('/scores')}
             >
               <Text style={styles.menuItemText}>📈 Scores</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => navigateTo('/chatbot')}
+            >
+              <Text style={styles.menuItemText}>🤖 Chatbot</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.menuItem} 
