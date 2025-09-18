@@ -260,6 +260,7 @@ export default function IndexRedirect() {
               <Image source={SCREENSHOT} style={styles.menuLogo} resizeMode="contain" />
               <Text style={styles.menuTitle}>Menu</Text>
             </View>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             <TouchableOpacity 
               style={styles.menuItem} 
               onPress={() => navigateTo('/')}
@@ -324,6 +325,7 @@ export default function IndexRedirect() {
                 </TouchableOpacity>
               </>
             )}
+            </ScrollView>
           </Animated.View>
         </TouchableOpacity>
       </Modal>
