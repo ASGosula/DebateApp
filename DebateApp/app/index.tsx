@@ -291,12 +291,7 @@ export default function IndexRedirect() {
             >
               <Text style={styles.menuItemText}>📈 Scores</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={() => navigateTo('/chatbot')}
-            >
-              <Text style={styles.menuItemText}>🤖 Chatbot</Text>
-            </TouchableOpacity>
+            
             <TouchableOpacity 
               style={styles.menuItem} 
               onPress={() => navigateTo('/assigned-practices')}
