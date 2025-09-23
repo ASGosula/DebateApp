@@ -226,6 +226,28 @@ export default function IndexRedirect() {
     }
   };
 
+  const removeTournament = async (id: string) => {
+    if (!isAdmin) return;
+    Alert.alert(
+      'Remove Tournament',
+      'Are you sure you want to remove this tournament?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'tournaments', id));
+            } catch {
+              Alert.alert('Error', 'Failed to delete tournament.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* Header with Hamburger Menu */}
@@ -513,7 +535,17 @@ export default function IndexRedirect() {
           ) : (
             tournaments.map((tournament) => (
               <View key={tournament.id} style={styles.tournamentCard}>
-                <Text style={styles.tournamentName}>{tournament.name}</Text>
+                <View style={styles.newsHeader}>
+                  <Text style={styles.tournamentName}>{tournament.name}</Text>
+                  {isAdmin && (
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => removeTournament(tournament.id)}
+                    >
+                      <Text style={styles.removeButtonText}>×</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 <Text style={styles.tournamentDate}>📅 {tournament.date}</Text>
                 <Text style={styles.tournamentLocation}>📍 {tournament.location}</Text>
                 <Text style={styles.tournamentDeadline}>⏰ Registration Deadline: {tournament.registrationDeadline}</Text>

@@ -1,0 +1,23 @@
+{
+  "cli": {
+    "version": ">= 14.0.0"
+  },
+  "build": {
+    "production": {
+      "ios": {
+        "autoIncrement": "buildNumber"
+      }
+    },
+    "development": {
+      "ios": {
+        "simulator": true
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {}
+    }
+  }
+}
+

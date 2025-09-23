@@ -10,7 +10,14 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lnhsdebate.app"
+      "bundleIdentifier": "com.lnhsdebate.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "This app records practice speeches.",
+        "NSSpeechRecognitionUsageDescription": "This app may use speech for accessibility.",
+        "NSPhotoLibraryAddUsageDescription": "Save exported/sharing files to your library.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
